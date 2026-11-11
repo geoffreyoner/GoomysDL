@@ -21,6 +21,8 @@ test('sealFile removes plaintext and decrypts roundtrip', async () => {
     const key = newKey();
     const sealed = await sealFile(file, key);
     await assert.rejects(access(file), /ENOENT/);
+    assert.match(path.basename(sealed.encPath), /^[0-9a-f-]+\.enc$/);
+    assert.ok(!path.basename(sealed.encPath).includes('sample'));
 
     const cipher = await readFile(sealed.encPath);
     assert.equal(cipher.length, plain.length);

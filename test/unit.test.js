@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeInfo, parseMediaUrl, safeName } from '../lib/validate.js';
+import { displayNameFor, normalizeInfo, parseMediaUrl, safeName } from '../lib/validate.js';
 import { MAX_FILE_MB, buildDownloadArgs, isTiktokUrl, parseProgress } from '../lib/ytdlp.js';
 
 test('parseMediaUrl accepts http(s) and normalizes', () => {
@@ -43,6 +43,14 @@ test('safeName strips path segments and rejects traversal-only names', () => {
   assert.equal(safeName(''), null);
   assert.equal(safeName('a\0b'), null);
   assert.equal(safeName('x'.repeat(201)), null);
+});
+
+test('displayNameFor keeps titles in memory-safe form', () => {
+  const used = new Set();
+  assert.equal(displayNameFor('Clip/Title', 'x.mp4', used), 'Clip Title.mp4');
+  assert.equal(displayNameFor('Clip/Title', 'y.mp4', used), 'Clip Title (2).mp4');
+  assert.equal(displayNameFor('', 'z.m4a', used), 'media.m4a');
+  assert.equal(displayNameFor('a'.repeat(300), 'q.webm', used).length, 155);
 });
 
 test('normalizeInfo builds video options from available heights', () => {
@@ -107,6 +115,17 @@ test('buildDownloadArgs passes selector and URL as separate values', () => {
   assert.equal(args[args.indexOf('--max-filesize') + 1], `${MAX_FILE_MB}M`);
   assert.equal(args.at(-1), 'https://example.com/a?b=1');
   assert.ok(args.includes('--merge-output-format'));
+});
+
+test('buildDownloadArgs uses a random output base when provided', () => {
+  const args = buildDownloadArgs({
+    jobDir: '/tmp/job',
+    url: 'https://youtube.com/watch?v=1',
+    selector: 'b',
+    audio: false,
+    outputBase: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  });
+  assert.equal(args[args.indexOf('-o') + 1], 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.%(ext)s');
 });
 
 test('buildDownloadArgs switches to audio extraction', () => {

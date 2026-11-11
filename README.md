@@ -7,7 +7,8 @@ Dark, monochrome web app for downloading video and photo from public social medi
 - Inspect a post and list available formats before downloading
 - Queued jobs with live progress, 2 concurrent downloads
 - Downloads sealed with AES-256-GCM at rest, keys held in memory only
-- Files auto-delete after 60 minutes; analysis expires after 15 minutes
+- Files are stored under random names; original titles stay in memory only
+- Files auto-delete after 10 minutes; analysis expires after 15 minutes
 - Host allowlist (TikTok, Instagram, X/Twitter, YouTube, Facebook, Reddit, Vimeo, Twitch, SoundCloud, Dailymotion)
 - Per-IP rate limit, 500 MB max file size, disk-space guard
 

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { newKey, openSealedStream, sealFile } from './lib/atrest.js';
-import { normalizeInfo, parseMediaUrl, safeName } from './lib/validate.js';
+import { displayNameFor, normalizeInfo, parseMediaUrl, safeName } from './lib/validate.js';
 import {
   MAX_FILE_MB,
   YTDLP,
@@ -23,7 +23,7 @@ const MAX_CONCURRENT = 2;
 const MAX_JOBS = 50;
 const JOB_TIMEOUT = 10 * 60 * 1000;
 const INSPECT_TTL = 15 * 60 * 1000;
-const FILE_TTL = 60 * 60 * 1000;
+const FILE_TTL = 10 * 60 * 1000;
 const MAX_JOB_BYTES = MAX_FILE_MB * 1024 * 1024;
 const MIN_FREE_BYTES = 2 * 1024 * 1024 * 1024;
 
@@ -122,6 +122,7 @@ app.post('/api/download', (req, res) => {
     log: [],
     files: [],
     error: null,
+    title: entry.title,
     label: `${entry.title} — ${option.label}`,
     url: cached.url,
     selector: option.selector,
@@ -260,6 +261,7 @@ async function runJob(job) {
     selector: job.selector,
     audio: job.audio,
     entryIndex: job.entryIndex,
+    outputBase: randomUUID(),
   });
   const child = spawn(YTDLP, args, { env: process.env });
   children.add(child);
@@ -283,9 +285,11 @@ async function runJob(job) {
       } else {
         pushLine(job, `[seal] encrypting ${plainFiles.length} file(s) at rest…`);
         try {
+          const used = new Set();
           for (const file of plainFiles) {
+            const name = displayNameFor(job.title, file.name, used);
             const sealed = await sealFile(path.join(job.dir, file.name), job.key);
-            job.files.push({ name: file.name, size: file.size, ...sealed });
+            job.files.push({ name, size: file.size, ...sealed });
           }
           job.status = 'done';
           job.progress = 100;
@@ -347,7 +351,7 @@ for (const entry of await fs.readdir(DOWNLOADS, { withFileTypes: true })) {
     await fs.rm(path.join(DOWNLOADS, entry.name), { recursive: true, force: true }).catch(() => {});
   }
 }
-setInterval(cleanup, 10 * 60 * 1000).unref();
+setInterval(cleanup, 60 * 1000).unref();
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Goomys/DL running at http://localhost:${PORT}`);

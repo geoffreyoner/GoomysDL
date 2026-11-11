@@ -1,0 +1,14 @@
+{
+  "name": "goomysdl",
+  "version": "1.0.0",
+  "description": "Goomys/DL — dark social media media downloader",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}

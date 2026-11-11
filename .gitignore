@@ -1,4 +1,7 @@
 node_modules/
 downloads/
 *.log
+.env
+.env.*
 .DS_Store
+Thumbs.db

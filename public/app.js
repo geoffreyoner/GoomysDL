@@ -25,6 +25,7 @@ const el = {
   meter: $('meter'),
   meterFill: $('meter-fill'),
   jobLog: $('job-log'),
+  faq: $('faq'),
   clock: $('clock'),
   statYtdlp: $('stat-ytdlp'),
   statFfmpeg: $('stat-ffmpeg'),
@@ -386,7 +387,26 @@ function tickClock() {
   el.clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
 }
 
+let faqVisible = false;
+let faqTicking = false;
+
+function updateFaq() {
+  faqTicking = false;
+  const show = window.scrollY > 200;
+  if (show === faqVisible) return;
+  faqVisible = show;
+  el.faq.classList.toggle('is-visible', show);
+}
+
+function onScroll() {
+  if (faqTicking) return;
+  faqTicking = true;
+  requestAnimationFrame(updateFaq);
+}
+
 tickClock();
 setInterval(tickClock, 1000);
+updateFaq();
+window.addEventListener('scroll', onScroll, { passive: true });
 refreshSystem();
 setInterval(refreshSystem, 60_000);

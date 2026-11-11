@@ -1,6 +1,6 @@
 # Goomys/DL
 
-Dark, monochrome web app for downloading video and photo from public social media posts. Built on Express, [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg.
+Web app for downloading video and photo from public social media posts. Built on Express, [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg.
 
 ## Features
 
@@ -53,6 +53,24 @@ The image runs as a non-root user. Do not mount a persistent volume over `downlo
 ```
 
 Logs are written to `~/.goomysdl/`. The quick-tunnel URL changes on every restart.
+
+### Fixed URL with a named tunnel
+
+1. Buy a domain and add it to your Cloudflare account (free plan).
+2. Create the tunnel and DNS route:
+
+   ```bash
+   ./scripts/tunnel-setup.sh dl.example.com
+   ```
+
+   The first run opens a Cloudflare login link. After that, config is written to `~/.cloudflared/config.yml`.
+3. Start as usual; `start.sh` prefers the named tunnel once the config exists:
+
+   ```bash
+   ./scripts/start.sh
+   ```
+
+The public URL then stays `https://dl.example.com` across restarts.
 
 For auto-start on boot, install the **Termux:Boot** app and copy the boot script:
 

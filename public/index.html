@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Goomys/DL — Public Media Extraction</title>
-  <meta name="description" content="Dark monochrome instrument for extracting video and photo from public social media posts.">
+  <title>Goomys/DL — Media Downloader</title>
+  <meta name="description" content="Extract video and photo from public social media posts.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
   <div class="frame">
     <header class="masthead">
       <a class="brand" href="/">Goomys<span class="slash">/</span>DL</a>
-      <p class="masthead-note">PUBLIC MEDIA EXTRACTION TERMINAL</p>
+      <p class="masthead-note">MEDIA DOWNLOADER</p>
       <div class="masthead-right">
         <span class="pulse" aria-hidden="true"></span>
         <span id="clock">--:--:--</span>
@@ -27,17 +27,20 @@
     <main>
       <section class="hero">
         <div class="hero-top">
-          <span class="label">[ 01 ] DOWNLOAD &amp; ARCHIVE</span>
-          <span class="label">LOCAL INSTRUMENT / EST. 2026</span>
+          <span class="label">[ 01 ] DOWNLOAD</span>
+          <span class="label">EST. 2026</span>
         </div>
 
         <h1>
           <span class="h1-line">DOWNLOAD</span>
-          <span class="h1-line h1-indent"><em class="h1-the">the</em> <span class="outline">ARCHIVE</span><span class="period">.</span></span>
+          <span class="h1-line h1-indent"><em class="h1-the">your</em> <span class="outline">MEDIA</span><span class="period">.</span></span>
         </h1>
 
         <div class="hero-foot">
-          <p class="hero-copy">A no-color instrument for pulling video and photo from public social posts. Paste a link, inspect the metadata, extract the file.</p>
+          <p class="hero-copy" lang="id">
+            Unduh video dan foto dari postingan media sosial publik. Tempel tautan, periksa detailnya, lalu simpan file.
+            <span class="hero-copy-en" lang="en">Download video and photos from public social posts. Paste a link, review the details, then save the file.</span>
+          </p>
           <ul class="hero-tags">
             <li>NO LOGIN</li>
             <li>AES-256 AT REST</li>
@@ -45,7 +48,7 @@
           </ul>
         </div>
 
-        <span class="rail" aria-hidden="true">MONOCHROME / PUBLIC SOURCES / YT-DLP ENGINE</span>
+        <span class="rail" aria-hidden="true">PUBLIC SOURCES / YT-DLP ENGINE</span>
       </section>
 
       <section class="console" aria-labelledby="input-label">
@@ -140,7 +143,36 @@
           <li><span>09</span>SOUNDCLOUD</li>
           <li><span>10</span>DAILYMOTION</li>
         </ul>
-        <p class="platform-note">Public posts only. Private, age-gated, or login-required content cannot be fetched. Respect creators and platform terms. Files are sealed with AES-256-GCM while stored under random names and auto-delete after 10 minutes.</p>
+        <p class="platform-note">Public posts only. Private, age-gated, or login-required content cannot be fetched. Respect creators and platform terms.</p>
+      </section>
+
+      <section id="faq" class="faq" aria-labelledby="faq-label">
+        <div class="panel-bar">
+          <span id="faq-label">06 / FAQ</span>
+          <span class="panel-id">TANYA JAWAB</span>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>Platform apa saja yang didukung?</summary>
+            <p>TikTok, Instagram, X/Twitter, YouTube, Facebook, Reddit, Vimeo, Twitch, SoundCloud, dan Dailymotion.</p>
+          </details>
+          <details>
+            <summary>Bisa mengunduh konten privat?</summary>
+            <p>Tidak. Hanya postingan publik. Konten privat, dibatasi usia, atau yang butuh login tidak bisa diambil.</p>
+          </details>
+          <details>
+            <summary>Berapa lama file tersedia?</summary>
+            <p>10 menit setelah unduhan selesai, lalu file dihapus otomatis.</p>
+          </details>
+          <details>
+            <summary>Bagaimana file disimpan?</summary>
+            <p>Terenkripsi AES-256-GCM dengan nama acak. Kunci hanya ada di memori dan hilang saat server restart.</p>
+          </details>
+          <details>
+            <summary>Batas ukuran dan jumlah unduhan?</summary>
+            <p>Maksimal 500 MB per unduhan, 2 unduhan berjalan bersamaan, dan 15 permintaan per menit per IP.</p>
+          </details>
+        </div>
       </section>
     </main>
 
@@ -152,13 +184,13 @@
         <span>JOBS / <span id="stat-jobs">0.0</span></span>
       </div>
       <div class="footer-row second">
-        <span>Goomys/DL — LOCAL INSTRUMENT</span>
-        <span>AES-256-GCM AT REST / NO ACCOUNTS / NO PERMANENT STORAGE</span>
+        <span>Goomys/DL — MEDIA DOWNLOADER</span>
+        <a href="#faq">FAQ</a>
       </div>
     </footer>
   </div>
 
-  <noscript><p class="noscript">This instrument requires JavaScript.</p></noscript>
+  <noscript><p class="noscript">This page requires JavaScript. Halaman ini membutuhkan JavaScript.</p></noscript>
   <script src="./app.js" type="module"></script>
 </body>
 </html>

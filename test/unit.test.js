@@ -148,14 +148,23 @@ test('isTiktokUrl matches TikTok domains only', () => {
   assert.equal(isTiktokUrl('https://youtube.com/watch?v=1'), false);
 });
 
-test('TikTok downloads force impersonation', () => {
-  const tiktok = buildDownloadArgs({
+test('TikTok and Instagram downloads force impersonation', () => {
+  for (const url of [
+    'https://www.tiktok.com/@a/video/1',
+    'https://www.instagram.com/reel/abc/',
+  ]) {
+    const args = buildDownloadArgs({ jobDir: '/tmp/job', url, selector: 'b', audio: false });
+    assert.equal(args[args.indexOf('--impersonate') + 1], 'Chrome-133');
+  }
+
+  const custom = buildDownloadArgs({
     jobDir: '/tmp/job',
     url: 'https://www.tiktok.com/@a/video/1',
     selector: 'b',
     audio: false,
+    impersonate: 'Safari-18.0',
   });
-  assert.equal(tiktok[tiktok.indexOf('--impersonate') + 1], 'Chrome-133');
+  assert.equal(custom[custom.indexOf('--impersonate') + 1], 'Safari-18.0');
 
   const youtube = buildDownloadArgs({
     jobDir: '/tmp/job',

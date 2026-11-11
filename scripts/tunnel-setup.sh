@@ -41,11 +41,18 @@ if [ -z "$ID" ]; then
   exit 1
 fi
 
+if [ ! -f "$CFG_DIR/$ID.json" ]; then
+  echo "Credential tunnel hilang: $CFG_DIR/$ID.json"
+  echo "Hapus tunnel lama lalu ulangi:"
+  echo "  cloudflared tunnel delete --force $NAME"
+  exit 1
+fi
+
 printf 'tunnel: %s\ncredentials-file: %s/%s.json\ningress:\n  - hostname: %s\n    service: http://127.0.0.1:%s\n  - service: http_status:404\n' \
   "$ID" "$CFG_DIR" "$ID" "$HOST" "$PORT" >"$CFG"
 
 echo "Mengarahkan ${HOST} ke tunnel..."
-cloudflared tunnel route dns "$NAME" "$HOST"
+cloudflared tunnel route dns --overwrite-dns "$NAME" "$HOST"
 
 echo
 echo "Selesai. Jalankan ./scripts/start.sh"

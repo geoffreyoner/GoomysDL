@@ -35,6 +35,15 @@ Environment variables:
 | `YTDLP_PATH` | `yt-dlp` | Path to the yt-dlp binary |
 | `FFMPEG_PATH` | `ffmpeg` | Path to the ffmpeg binary |
 | `MAX_FILE_MB` | `500` | Max download size per job |
+| `YTDLP_COOKIES` | (none) | Path to a Netscape `cookies.txt` for private/age-gated posts |
+
+Instagram and TikTok use browser impersonation automatically. Public Instagram posts often work without a session, but private posts, stories and age-gated content need cookies from a logged-in account:
+
+```bash
+export YTDLP_COOKIES="$HOME/cookies.txt"
+```
+
+Export cookies from your browser in Netscape format. Cookies are session credentials: use a throwaway account, keep volume low, never commit the file (it is gitignored).
 
 ## Docker
 

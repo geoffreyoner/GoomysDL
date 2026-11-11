@@ -8,11 +8,13 @@ import { fileURLToPath } from 'node:url';
 import { newKey, openSealedStream, sealFile } from './lib/atrest.js';
 import { displayNameFor, normalizeInfo, parseMediaUrl, safeName } from './lib/validate.js';
 import {
+  IMPERSONATE_TARGETS,
   MAX_FILE_MB,
   YTDLP,
   buildDownloadArgs,
   getSystemInfo,
   inspect,
+  isTransient,
   parseProgress,
 } from './lib/ytdlp.js';
 
@@ -255,23 +257,10 @@ async function runJob(job) {
     job.error = 'Not enough disk space on the server.';
     return;
   }
-  const args = buildDownloadArgs({
-    jobDir: job.dir,
-    url: job.url,
-    selector: job.selector,
-    audio: job.audio,
-    entryIndex: job.entryIndex,
-    outputBase: randomUUID(),
-  });
-  const child = spawn(YTDLP, args, { env: process.env });
-  children.add(child);
   let settled = false;
-  let timer = null;
-  const finish = async (code) => {
+  const finish = async (code, stderr = '') => {
     if (settled) return;
     settled = true;
-    if (timer) clearTimeout(timer);
-    children.delete(child);
     if (code === 0) {
       const plainFiles = await listFiles(job.dir);
       const totalBytes = plainFiles.reduce((sum, file) => sum + file.size, 0);
@@ -302,23 +291,60 @@ async function runJob(job) {
       }
     } else {
       job.status = 'error';
-      const errorLine = [...job.log].reverse().find((l) => /error/i.test(l));
+      const errorLine = stderr.split('\n').filter((l) => /error/i.test(l)).at(-1);
       job.error = (errorLine || 'Download failed.').replace(/^ERROR:\s*/, '').slice(0, 300);
     }
   };
-  timer = setTimeout(() => {
-    pushLine(job, '[timeout] killed after 10 minutes');
-    child.kill('SIGKILL');
-  }, JOB_TIMEOUT);
-  child.stdout.on('data', splitLines((line) => pushLine(job, line)));
-  child.stderr.on('data', splitLines((line) => pushLine(job, line)));
-  child.on('error', (err) => {
-    pushLine(job, err.message);
-    finish(-1);
-  });
-  await new Promise((resolve) => {
-    child.on('close', (code) => finish(code).finally(resolve));
-  });
+
+  const deadline = Date.now() + JOB_TIMEOUT;
+  const outputBase = randomUUID();
+  let code = -1;
+  let stderr = '';
+
+  for (let attempt = 0; attempt < IMPERSONATE_TARGETS.length; attempt += 1) {
+    const args = buildDownloadArgs({
+      jobDir: job.dir,
+      url: job.url,
+      selector: job.selector,
+      audio: job.audio,
+      entryIndex: job.entryIndex,
+      outputBase,
+      impersonate: IMPERSONATE_TARGETS[attempt],
+    });
+    const child = spawn(YTDLP, args, { env: process.env });
+    children.add(child);
+    let childStderr = '';
+    const timer = setTimeout(() => {
+      pushLine(job, '[timeout] killed after 10 minutes');
+      child.kill('SIGKILL');
+    }, Math.max(1000, deadline - Date.now()));
+
+    code = await new Promise((resolve) => {
+      child.stdout.on('data', splitLines((line) => pushLine(job, line)));
+      child.stderr.on('data', splitLines((line) => {
+        childStderr += `${line}\n`;
+        pushLine(job, line);
+      }));
+      child.on('error', (err) => {
+        pushLine(job, err.message);
+        childStderr += `${err.message}\n`;
+        resolve(-1);
+      });
+      child.on('close', (exitCode) => resolve(exitCode));
+    });
+
+    clearTimeout(timer);
+    children.delete(child);
+    stderr = childStderr;
+
+    if (code === 0) break;
+    if (attempt === IMPERSONATE_TARGETS.length - 1) break;
+    if (Date.now() >= deadline || !isTransient({ stderr })) break;
+    pushLine(job, `[retry] upstream blocked, retry ${attempt + 2}/${IMPERSONATE_TARGETS.length}`);
+    await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+  }
+
+  await finish(code, stderr);
 }
 
 async function cleanup() {

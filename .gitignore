@@ -3,5 +3,7 @@ downloads/
 *.log
 .env
 .env.*
+cookies*.txt
+*.cookies.txt
 .DS_Store
 Thumbs.db

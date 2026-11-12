@@ -77,6 +77,11 @@ input {
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .sr-only {
@@ -240,10 +245,6 @@ h1 {
 }
 
 .hero-foot {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 28px;
   margin-top: clamp(42px, 6vw, 72px);
   padding-top: 24px;
   border-top: 1px solid var(--line);
@@ -261,24 +262,6 @@ h1 {
   display: block;
   margin-top: 8px;
   color: var(--dim);
-}
-
-.hero-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--dim);
-}
-
-.hero-tags li::before {
-  content: "□ ";
-  color: var(--line-bright);
 }
 
 .rail {
@@ -1009,10 +992,18 @@ h1 {
   gap: 8px 24px;
 }
 
-.footer-row.second {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+.footer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+
+.footer-tags li::before {
+  content: "□ ";
   color: var(--line-bright);
 }
 
@@ -1020,6 +1011,10 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
+}
+
+.footer-links a {
+  color: var(--muted);
 }
 
 .footer-links a:hover {
@@ -1136,12 +1131,6 @@ h1 {
     display: none;
   }
 
-  .hero-foot {
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 20px;
-  }
-
   .prompt-form {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -1172,10 +1161,6 @@ h1 {
 }
 
 @media (max-width: 460px) {
-  .hero-tags {
-    gap: 12px;
-  }
-
   .entries {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

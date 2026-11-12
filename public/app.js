@@ -26,10 +26,6 @@ const el = {
   meterFill: $('meter-fill'),
   jobLog: $('job-log'),
   clock: $('clock'),
-  statYtdlp: $('stat-ytdlp'),
-  statFfmpeg: $('stat-ffmpeg'),
-  statDisk: $('stat-disk'),
-  statJobs: $('stat-jobs'),
 };
 
 let inspect = null;
@@ -57,19 +53,6 @@ function formatDuration(seconds) {
   const mm = String(m).padStart(2, '0');
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-function formatBytes(bytes) {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let value = bytes / 1024;
-  let i = 0;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i += 1;
-  }
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[i]}`;
 }
 
 function mediaType(entries) {
@@ -322,7 +305,6 @@ function pollJob(jobId) {
           autoSavedJob = currentJobId;
           autoSaveFiles(data.files || [], currentJobId);
         }
-        refreshSystem();
         return;
       }
       if (data.status === 'error') {
@@ -368,25 +350,9 @@ function autoSaveFiles(files, jobId) {
   setTimeout(() => window.location.reload(), 8000);
 }
 
-async function refreshSystem() {
-  try {
-    const response = await fetch('/api/system');
-    if (!response.ok) return;
-    const data = await response.json();
-    el.statYtdlp.textContent = data.ytdlp ? `YT-DLP ${data.ytdlp}` : 'YT-DLP MISSING';
-    el.statFfmpeg.textContent = data.ffmpeg || 'MISSING';
-    el.statDisk.textContent = formatBytes(data.diskFree);
-    el.statJobs.textContent = `RUN ${data.running ?? 0} · WAIT ${data.queued ?? 0}`;
-  } catch {
-    /* status strip is best effort */
-  }
-}
-
 function tickClock() {
   el.clock.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
 }
 
 tickClock();
 setInterval(tickClock, 1000);
-refreshSystem();
-setInterval(refreshSystem, 60_000);

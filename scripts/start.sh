@@ -8,6 +8,10 @@ mkdir -p "$STATE"
 
 PORT="${PORT:-3000}"
 
+show_lan() {
+  PORT="$PORT" node -e 'const os = require("node:os"); for (const [name, list] of Object.entries(os.networkInterfaces())) for (const a of list || []) if (a.family === "IPv4" && !a.internal) console.log(`LAN: http://${a.address}:${process.env.PORT} (${name})`)' 2>/dev/null || true
+}
+
 if [ -f "$STATE/server.pid" ] && kill -0 "$(cat "$STATE/server.pid")" 2>/dev/null; then
   echo "Server already running (PID $(cat "$STATE/server.pid"))."
 else
@@ -25,6 +29,7 @@ fi
 
 if ! command -v cloudflared >/dev/null; then
   echo "Local: http://127.0.0.1:${PORT}"
+  show_lan
   echo "cloudflared not installed; no public tunnel."
   exit 0
 fi
@@ -42,6 +47,7 @@ else
 fi
 
 echo "Local: http://127.0.0.1:${PORT}"
+show_lan
 if [ -f "$CFG" ]; then
   HOST=$(awk '/hostname:/ { sub(/.*hostname:[[:space:]]*/, ""); print; exit }' "$CFG" || true)
   if [ -n "$HOST" ]; then

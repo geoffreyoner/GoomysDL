@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=6">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -42,11 +42,6 @@
             Unduh video dan foto dari postingan media sosial publik. Tempel tautan, periksa detailnya, lalu simpan file.
             <span class="hero-copy-en" lang="en">Download video and photos from public social posts. Paste a link, review the details, then save the file.</span>
           </p>
-          <ul class="hero-tags">
-            <li>NO LOGIN</li>
-            <li>AES-256 AT REST</li>
-            <li>10 MIN TTL</li>
-          </ul>
         </div>
 
         <span class="rail" aria-hidden="true">PUBLIC SOURCES / YT-DLP ENGINE</span>
@@ -59,7 +54,7 @@
         </div>
         <form id="analyze-form" class="prompt-form" autocomplete="off">
           <label class="prompt-caret" for="url">URL&nbsp;&gt;</label>
-          <input id="url" name="url" type="url" inputmode="url" placeholder="https://www.instagram.com/p/..." spellcheck="false" required>
+          <input id="url" name="url" type="url" inputmode="url" placeholder="https://example.com/post/..." spellcheck="false" required>
           <button id="analyze-btn" class="analyze-btn" type="submit">
             <span>ANALYZE</span>
             <span aria-hidden="true">↗</span>
@@ -131,13 +126,11 @@
 
     <footer class="footer">
       <div class="footer-row">
-        <span>SYS / <span id="stat-ytdlp">YT-DLP —</span></span>
-        <span>FFMPEG / <span id="stat-ffmpeg">—</span></span>
-        <span>DISK / <span id="stat-disk">—</span></span>
-        <span>JOBS / <span id="stat-jobs">0.0</span></span>
-      </div>
-      <div class="footer-row second">
-        <span>GoomysDL — MEDIA DOWNLOADER</span>
+        <ul class="footer-tags">
+          <li>NO LOGIN</li>
+          <li>AES-256 AT REST</li>
+          <li>10 MIN TTL</li>
+        </ul>
         <nav class="footer-links" aria-label="Site">
           <a href="/supported.html">Supported</a>
           <a href="/faq.html">FAQ</a>
@@ -150,6 +143,6 @@
   </div>
 
   <noscript><p class="noscript">This page requires JavaScript. Halaman ini membutuhkan JavaScript.</p></noscript>
-  <script src="./app.js?v=3" type="module"></script>
+  <script src="./app.js?v=4" type="module"></script>
 </body>
 </html>

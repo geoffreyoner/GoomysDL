@@ -2,6 +2,7 @@ import express from 'express';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
@@ -405,6 +406,13 @@ setInterval(cleanup, 60 * 1000).unref();
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`GoomysDL running at http://localhost:${PORT}`);
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    for (const addr of list || []) {
+      if (addr.family === 'IPv4' && !addr.internal) {
+        console.log(`LAN: http://${addr.address}:${PORT} (${name})`);
+      }
+    }
+  }
 });
 
 function shutdown() {

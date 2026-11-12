@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { displayNameFor, normalizeInfo, parseMediaUrl, safeName } from '../lib/validate.js';
-import { MAX_FILE_MB, buildDownloadArgs, isTiktokUrl, parseProgress } from '../lib/ytdlp.js';
+import { MAX_FILE_MB, buildDownloadArgs, isTiktokUrl, isTransient, parseProgress } from '../lib/ytdlp.js';
+import { buildGalleryArgs, isGalleryPhotoUrl } from '../lib/gallery.js';
 
 test('parseMediaUrl accepts http(s) and normalizes', () => {
   assert.equal(parseMediaUrl(' https://youtube.com/a '), 'https://youtube.com/a');
@@ -97,6 +98,24 @@ test('normalizeInfo detects photo carousels', () => {
   assert.equal(info.entries[1].title, 'Item 02');
 });
 
+test('normalizeInfo keeps playlist positions and gallery photos', () => {
+  const info = normalizeInfo({
+    extractor_key: 'Instagram',
+    title: 'Post',
+    entries: [
+      null,
+      { id: '2', ext: 'jpeg', title: 'Trip', gallery: true, galleryCount: 3 },
+      null,
+      { id: '4', ext: 'mp4', formats: [{ vcodec: 'h264', height: 720, ext: 'mp4' }] },
+    ],
+  });
+  assert.equal(info.entries.length, 2);
+  assert.equal(info.entries[0].index, 1);
+  assert.equal(info.entries[0].gallery, true);
+  assert.equal(info.entries[0].options[0].label, 'ALL PHOTOS / 3 FILES');
+  assert.equal(info.entries[1].index, 3);
+});
+
 test('normalizeInfo rejects empty metadata', () => {
   assert.throws(() => normalizeInfo(null), /no metadata/i);
 });
@@ -173,6 +192,45 @@ test('TikTok and Instagram downloads force impersonation', () => {
     audio: false,
   });
   assert.ok(!youtube.includes('--impersonate'));
+});
+
+test('isGalleryPhotoUrl targets photo posts only', () => {
+  for (const url of [
+    'https://www.instagram.com/p/DOZZg7ZDj-l/',
+    'https://instagr.am/p/abc/',
+    'https://www.tiktok.com/@a/photo/123',
+  ]) {
+    assert.equal(isGalleryPhotoUrl(url), true, url);
+  }
+  for (const url of [
+    'https://www.instagram.com/reel/abc/',
+    'https://www.instagram.com/tv/abc/',
+    'https://www.tiktok.com/@a/video/123',
+    'https://vm.tiktok.com/abc/',
+    'https://www.tiktok.com/t/abc/',
+    'https://youtube.com/watch?v=1',
+  ]) {
+    assert.equal(isGalleryPhotoUrl(url), false, url);
+  }
+});
+
+test('buildGalleryArgs writes random names into the job directory', () => {
+  const args = buildGalleryArgs({
+    jobDir: '/tmp/job',
+    url: 'https://www.tiktok.com/@a/photo/123',
+    outputBase: 'abc',
+  });
+  assert.equal(args[args.indexOf('-D') + 1], '/tmp/job');
+  assert.equal(args[args.indexOf('-f') + 1], 'abc_{num}.{extension}');
+  assert.equal(args[args.indexOf('--filter') + 1].includes("'jpeg'"), true);
+  assert.equal(args.includes('--cookies'), false);
+  assert.equal(args.at(-1), 'https://www.tiktok.com/@a/photo/123');
+});
+
+test('isTransient retries upstream blocks from yt-dlp and gallery-dl', () => {
+  assert.equal(isTransient({ stderr: 'ERROR: HTTP Error 403: Forbidden' }), true);
+  assert.equal(isTransient({ stderr: "HttpError: '403 Forbidden'" }), true);
+  assert.equal(isTransient({ stderr: 'ERROR: Unsupported URL' }), false);
 });
 
 test('parseProgress reads yt-dlp percentage lines', () => {

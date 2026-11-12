@@ -1,4 +1,4 @@
-# Goomys/DL
+# GoomysDL
 
 Web app for downloading video and photo from public social media posts. Built on Express, [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg.
 
@@ -10,12 +10,14 @@ Web app for downloading video and photo from public social media posts. Built on
 - Files are stored under random names; original titles stay in memory only
 - Files auto-delete after 10 minutes; analysis expires after 15 minutes
 - Host allowlist (TikTok, Instagram, X/Twitter, YouTube, Facebook, Reddit, Vimeo, Twitch, SoundCloud, Dailymotion)
+- Photo posts (Instagram carousels, TikTok slideshows) via `gallery-dl`
 - Per-IP rate limit, 500 MB max file size, disk-space guard
 
 ## Requirements
 
 - Node.js 24+
 - `yt-dlp` and `ffmpeg` on `PATH`
+- `gallery-dl` on `PATH` for photo posts (`pip install gallery-dl`)
 
 ## Run locally
 
@@ -34,6 +36,7 @@ Environment variables:
 | `PORT` | `3000` | HTTP port |
 | `YTDLP_PATH` | `yt-dlp` | Path to the yt-dlp binary |
 | `FFMPEG_PATH` | `ffmpeg` | Path to the ffmpeg binary |
+| `GALLERYDL_PATH` | `gallery-dl` | Path to the gallery-dl binary (photo posts) |
 | `MAX_FILE_MB` | `500` | Max download size per job |
 | `YTDLP_COOKIES` | (none) | Path to a Netscape `cookies.txt` for private/age-gated posts |
 
@@ -43,7 +46,7 @@ Instagram and TikTok use browser impersonation automatically. Public Instagram p
 export YTDLP_COOKIES="$HOME/cookies.txt"
 ```
 
-Export cookies from your browser in Netscape format. Cookies are session credentials: use a throwaway account, keep volume low, never commit the file (it is gitignored).
+Export cookies from your browser in Netscape format. Cookies are session credentials: use a throwaway account, keep volume low, never commit the file (it is gitignored). Instagram photo posts also need the same cookies.
 
 ## Docker
 

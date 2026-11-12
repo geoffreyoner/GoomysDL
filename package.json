@@ -1,7 +1,7 @@
 {
   "name": "goomysdl",
   "version": "1.0.0",
-  "description": "Goomys/DL — social media downloader",
+  "description": "GoomysDL — social media downloader",
   "main": "server.js",
   "type": "module",
   "scripts": {

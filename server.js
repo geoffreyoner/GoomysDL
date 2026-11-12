@@ -17,6 +17,13 @@ import {
   isTransient,
   parseProgress,
 } from './lib/ytdlp.js';
+import {
+  GALLERYDL,
+  buildGalleryArgs,
+  galleryAvailable,
+  galleryInspect,
+  isGalleryPhotoUrl,
+} from './lib/gallery.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -66,6 +73,7 @@ function limitPost(req, res, next) {
 app.use('/api', limitPost);
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/favicon.ico', (req, res) => res.redirect(308, '/favicon.svg?v=2'));
 
 function explainError(err) {
   const stderr = typeof err?.stderr === 'string' ? err.stderr : '';
@@ -76,7 +84,7 @@ function explainError(err) {
     : String(err?.message || 'Extraction failed.');
   message = message.split('\n')[0].slice(0, 300);
   if (/Unsupported URL/i.test(message)) return 'This URL is not supported by the extractor.';
-  if (/Sign in|log in|login|cookies|private|rate.?limit/i.test(message)) {
+  if (/Sign in|log in|login|cookies|private|rate.?limit|401|unauthorized/i.test(message)) {
     return 'This post needs login/cookies or is rate-limited. Public posts only.';
   }
   if (/timed? ?out/i.test(message)) return 'The platform took too long to respond. Try again.';
@@ -91,7 +99,19 @@ app.post('/api/inspect', async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
   try {
-    const raw = await inspect(url);
+    let raw;
+    try {
+      raw = await inspect(url);
+    } catch (err) {
+      if (!isGalleryPhotoUrl(url)) throw err;
+      if (!(await galleryAvailable())) throw new Error('Photo posts need gallery-dl installed on the server.');
+      try {
+        raw = await galleryInspect(url);
+      } catch (galleryErr) {
+        if (/no photos found/i.test(galleryErr.message)) throw err;
+        throw galleryErr;
+      }
+    }
     const info = normalizeInfo(raw);
     if (!info.entries.length) {
       return res.status(422).json({ error: 'No downloadable media found at this URL.' });
@@ -129,6 +149,7 @@ app.post('/api/download', (req, res) => {
     url: cached.url,
     selector: option.selector,
     audio: Boolean(option.audio),
+    gallery: Boolean(entry.gallery),
     entryIndex: entry.index,
     dir: path.join(DOWNLOADS, id),
     key: newKey(),
@@ -301,17 +322,20 @@ async function runJob(job) {
   let code = -1;
   let stderr = '';
 
-  for (let attempt = 0; attempt < IMPERSONATE_TARGETS.length; attempt += 1) {
-    const args = buildDownloadArgs({
-      jobDir: job.dir,
-      url: job.url,
-      selector: job.selector,
-      audio: job.audio,
-      entryIndex: job.entryIndex,
-      outputBase,
-      impersonate: IMPERSONATE_TARGETS[attempt],
-    });
-    const child = spawn(YTDLP, args, { env: process.env });
+  const attempts = IMPERSONATE_TARGETS.length;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const args = job.gallery
+      ? buildGalleryArgs({ jobDir: job.dir, url: job.url, outputBase })
+      : buildDownloadArgs({
+        jobDir: job.dir,
+        url: job.url,
+        selector: job.selector,
+        audio: job.audio,
+        entryIndex: job.entryIndex,
+        outputBase,
+        impersonate: IMPERSONATE_TARGETS[attempt],
+      });
+    const child = spawn(job.gallery ? GALLERYDL : YTDLP, args, { env: process.env });
     children.add(child);
     let childStderr = '';
     const timer = setTimeout(() => {
@@ -338,9 +362,9 @@ async function runJob(job) {
     stderr = childStderr;
 
     if (code === 0) break;
-    if (attempt === IMPERSONATE_TARGETS.length - 1) break;
+    if (attempt === attempts - 1) break;
     if (Date.now() >= deadline || !isTransient({ stderr })) break;
-    pushLine(job, `[retry] upstream blocked, retry ${attempt + 2}/${IMPERSONATE_TARGETS.length}`);
+    pushLine(job, `[retry] upstream blocked, retry ${attempt + 2}/${attempts}`);
     await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
   }
 
@@ -380,7 +404,7 @@ for (const entry of await fs.readdir(DOWNLOADS, { withFileTypes: true })) {
 setInterval(cleanup, 60 * 1000).unref();
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Goomys/DL running at http://localhost:${PORT}`);
+  console.log(`GoomysDL running at http://localhost:${PORT}`);
 });
 
 function shutdown() {

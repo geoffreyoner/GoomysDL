@@ -2,6 +2,7 @@
   "name": "goomysdl",
   "version": "1.0.0",
   "description": "GoomysDL — social media downloader",
+  "license": "MIT",
   "main": "server.js",
   "type": "module",
   "scripts": {

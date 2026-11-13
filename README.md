@@ -105,3 +105,7 @@ Also disable Android battery optimization for Termux so the process is not kille
 - The allowlist intentionally blocks arbitrary URLs to prevent SSRF against internal networks. Media URLs returned by scrapers are revalidated before download; private and loopback addresses are rejected.
 - Scraper providers receive the URL you paste. See the privacy page.
 - Only download content you have the right to use, and respect each platform's terms of service.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

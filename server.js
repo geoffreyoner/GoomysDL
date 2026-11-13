@@ -25,6 +25,10 @@ import {
   galleryInspect,
   isGalleryPhotoUrl,
 } from './lib/gallery.js';
+import { providerFor } from './lib/providers.js';
+import { scraperInspect } from './lib/scraper.js';
+import { downloadScraperSources } from './lib/scraper-download.js';
+import { zipFiles } from './lib/bundle.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -88,6 +92,10 @@ function explainError(err) {
   if (/Sign in|log in|login|cookies|private|rate.?limit|401|unauthorized/i.test(message)) {
     return 'This post needs login/cookies or is rate-limited. Public posts only.';
   }
+  if (/Spotify album|playlist/i.test(message)) return message;
+  if (/no downloadable media|no download links|no files found|no chapter images/i.test(message)) {
+    return 'No downloadable media found at this URL.';
+  }
   if (/timed? ?out/i.test(message)) return 'The platform took too long to respond. Try again.';
   return message;
 }
@@ -100,6 +108,17 @@ app.post('/api/inspect', async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
   try {
+    const provider = providerFor(url);
+    if (provider) {
+      const { info, plan } = await scraperInspect(url);
+      if (!info.entries.length) {
+        return res.status(422).json({ error: 'No downloadable media found at this URL.' });
+      }
+      const inspectId = randomUUID();
+      inspects.set(inspectId, { url, info, plan, engine: 'scraper', createdAt: Date.now() });
+      return res.json({ inspectId, ...info });
+    }
+
     let raw;
     try {
       raw = await inspect(url);
@@ -131,12 +150,18 @@ app.post('/api/download', (req, res) => {
   if (!cached) {
     return res.status(410).json({ error: 'This analysis expired. Paste the URL again.' });
   }
-  const entry = cached.info.entries[Number(entryIndex)];
+  const entry = cached.info.entries.find((item) => item.index === Number(entryIndex))
+    || cached.info.entries[Number(entryIndex)];
   if (!entry) return res.status(400).json({ error: 'Invalid entry.' });
   if (jobs.size >= MAX_JOBS) {
     return res.status(429).json({ error: 'Too many jobs in the queue. Wait a moment.' });
   }
   const option = entry.options.find((o) => o.key === optionKey) || entry.options[0];
+  const scraperOptions = cached.plan?.entries?.find((item) => item.index === entry.index)?.options;
+  const scraperSources = cached.engine === 'scraper' ? scraperOptions?.[option.key] : null;
+  if (cached.engine === 'scraper' && (!Array.isArray(scraperSources) || !scraperSources.length)) {
+    return res.status(400).json({ error: 'Invalid download option.' });
+  }
   const id = randomUUID();
   const job = {
     id,
@@ -148,9 +173,13 @@ app.post('/api/download', (req, res) => {
     title: entry.title,
     label: `${entry.title} — ${option.label}`,
     url: cached.url,
+    engine: cached.engine || (entry.gallery ? 'gallery' : 'ytdlp'),
     selector: option.selector,
     audio: Boolean(option.audio),
-    gallery: Boolean(entry.gallery),
+    gallery: cached.engine ? false : Boolean(entry.gallery),
+    provider: cached.plan?.provider || null,
+    sources: scraperSources,
+    fileLabels: {},
     entryIndex: entry.index,
     dir: path.join(DOWNLOADS, id),
     key: newKey(),
@@ -284,7 +313,21 @@ async function runJob(job) {
     if (settled) return;
     settled = true;
     if (code === 0) {
-      const plainFiles = await listFiles(job.dir);
+      let plainFiles = await listFiles(job.dir);
+      if (plainFiles.length > 1) {
+        const zipName = `bundle-${randomUUID()}.zip`;
+        try {
+          const count = plainFiles.length;
+          const zip = await zipFiles(job.dir, plainFiles.map((file) => file.name), zipName);
+          await Promise.all(plainFiles.map((file) => fs.rm(path.join(job.dir, file.name), { force: true })));
+          job.fileLabels = { [zip.name]: job.title };
+          plainFiles = [zip];
+          pushLine(job, `[zip] bundled ${count} files into one archive`);
+        } catch (err) {
+          await fs.rm(path.join(job.dir, zipName), { force: true }).catch(() => {});
+          pushLine(job, `[zip] skipped: ${err.message}`);
+        }
+      }
       const totalBytes = plainFiles.reduce((sum, file) => sum + file.size, 0);
       if (plainFiles.length === 0) {
         job.status = 'error';
@@ -298,7 +341,7 @@ async function runJob(job) {
         try {
           const used = new Set();
           for (const file of plainFiles) {
-            const name = displayNameFor(job.title, file.name, used);
+            const name = displayNameFor(job.fileLabels?.[file.name] || job.title, file.name, used);
             const sealed = await sealFile(path.join(job.dir, file.name), job.key);
             job.files.push({ name, size: file.size, ...sealed });
           }
@@ -313,7 +356,8 @@ async function runJob(job) {
       }
     } else {
       job.status = 'error';
-      const errorLine = stderr.split('\n').filter((l) => /error/i.test(l)).at(-1);
+      const lines = stderr.split('\n').map((line) => line.trim()).filter(Boolean);
+      const errorLine = lines.filter((line) => /error/i.test(line)).at(-1) || lines.at(-1);
       job.error = (errorLine || 'Download failed.').replace(/^ERROR:\s*/, '').slice(0, 300);
     }
   };
@@ -322,6 +366,25 @@ async function runJob(job) {
   const outputBase = randomUUID();
   let code = -1;
   let stderr = '';
+
+  if (job.engine === 'scraper') {
+    job.outputBase = outputBase;
+    try {
+      await downloadScraperSources(job, {
+        maxBytes: MAX_JOB_BYTES,
+        deadline,
+        pushLine: (_job, line) => pushLine(job, line),
+        onChild: (child, finished) => {
+          if (child) children.add(child);
+          else if (finished) children.delete(finished);
+        },
+      });
+      await finish(0);
+    } catch (err) {
+      await finish(-1, `ERROR: ${err.message}`);
+    }
+    return;
+  }
 
   const attempts = IMPERSONATE_TARGETS.length;
   for (let attempt = 0; attempt < attempts; attempt += 1) {

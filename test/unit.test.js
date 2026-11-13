@@ -25,6 +25,8 @@ test('parseMediaUrl rejects unsupported and private hosts', () => {
   assert.equal(parseMediaUrl('https://vm.tiktok.com/abc/'), 'https://vm.tiktok.com/abc/');
   assert.equal(parseMediaUrl('https://youtu.be/x'), 'https://youtu.be/x');
   assert.equal(parseMediaUrl('https://www.reddit.com/r/a'), 'https://www.reddit.com/r/a');
+  assert.equal(parseMediaUrl('https://open.spotify.com/track/x'), 'https://open.spotify.com/track/x');
+  assert.equal(parseMediaUrl('https://www.terabox.com/s/x'), 'https://www.terabox.com/s/x');
 });
 
 test('parseMediaUrl rejects bad input', () => {
@@ -238,4 +240,122 @@ test('parseProgress reads yt-dlp percentage lines', () => {
   assert.equal(parseProgress('[download] 100% of 3.00MiB'), 100);
   assert.equal(parseProgress('[download] Destination: a.mp4'), null);
   assert.equal(parseProgress(''), null);
+});
+
+test('providerFor routes scraper hosts and rejects lookalikes', async () => {
+  const { providerFor } = await import('../lib/providers.js');
+  assert.equal(providerFor('https://open.spotify.com/track/x')?.id, 'spotify');
+  assert.equal(providerFor('https://www.terabox.com/s/x')?.id, 'terabox');
+  assert.equal(providerFor('https://www.threads.net/@a/post/b')?.id, 'threads');
+  assert.equal(providerFor('https://www.pixiv.net/artworks/1')?.id, 'pixiv');
+  assert.equal(providerFor('https://nimegami.id/a/download/1/720p/b/')?.id, 'nimegami');
+  assert.equal(providerFor('https://sfile.co/abc123')?.id, 'sfile');
+  assert.equal(providerFor('https://sfile.mobi/abc123')?.id, 'sfile');
+  assert.equal(providerFor('https://open.spotify.com.evil.com/track/x'), null);
+  assert.equal(providerFor('https://www.nimegami.id.evil.com/a/'), null);
+});
+
+test('normalizeScraperResult keeps Spotify single and drops cover images', async () => {
+  const { providerById } = await import('../lib/providers.js');
+  const { normalizeScraperResult } = await import('../lib/scraper.js');
+  const out = normalizeScraperResult(providerById('spotify'), 'https://open.spotify.com/track/x', {
+    title: 'Song',
+    type: 'audio',
+    downloads: [
+      { type: 'audio', quality: '320kbps', url: 'https://cdn.test/a.mp3' },
+      { type: 'image', quality: 'Cover', url: 'https://cdn.test/a.jpg' },
+    ],
+  });
+  assert.equal(out.plan.mode, 'single');
+  assert.equal(out.plan.entries[0].options.main.length, 1);
+  assert.equal(out.info.entries[0].type, 'audio');
+});
+
+test('normalizeScraperResult treats TeraBox files as files, not photos', async () => {
+  const { providerById } = await import('../lib/providers.js');
+  const { normalizeScraperResult } = await import('../lib/scraper.js');
+  const out = normalizeScraperResult(providerById('terabox'), 'https://www.terabox.com/s/x', {
+    title: 'a.rar',
+    downloads: [{ type: 'file', filename: 'a.rar', quality: 'Direct', url: 'https://cdn.test/x?token=1' }],
+  });
+  assert.equal(out.info.entries[0].type, 'file');
+  assert.equal(out.info.entries[0].options[0].label, 'ALL FILES / 1 FILE');
+});
+
+test('normalizeScraperResult builds image collections for comics', async () => {
+  const { providerById } = await import('../lib/providers.js');
+  const { normalizeScraperResult } = await import('../lib/scraper.js');
+  const out = normalizeScraperResult(providerById('komiku'), 'https://komiku.org/x-chapter-1/', {
+    title: 'Chapter 1',
+    downloads: [
+      { type: 'image', quality: 'Page 1', url: 'https://cdn.test/1.jpg' },
+      { type: 'image', quality: 'Page 2', url: 'https://cdn.test/2.jpg' },
+    ],
+  });
+  assert.equal(out.plan.mode, 'collection');
+  assert.equal(out.info.entries[0].type, 'image');
+  assert.equal(out.info.entries[0].options[0].label, 'ALL PHOTOS / 2 FILES');
+});
+
+test('normalizeScraperResult skips non-direct link results', async () => {
+  const { normalizeScraperResult } = await import('../lib/scraper.js');
+  const out = normalizeScraperResult(
+    { id: 'fake', name: 'Fake', mode: 'auto' },
+    'https://example.test/a',
+    {
+      title: 'Episode',
+      downloads: [
+        { type: 'link', quality: 'Web Player', url: 'https://example.test/embed/a' },
+        { type: 'link', quality: 'Direct HLS Stream', url: 'https://cdn.test/a.m3u8' },
+        { type: 'video', quality: '720p', url: 'https://cdn.test/a.mp4' },
+      ],
+    },
+  );
+  assert.equal(out.plan.mode, 'options');
+  assert.equal(out.plan.entries[0].options.q1[0].url, 'https://cdn.test/a.m3u8');
+  assert.equal(out.plan.entries[0].options.q2[0].url, 'https://cdn.test/a.mp4');
+});
+
+test('Spotify albums and playlists are rejected', async () => {
+  const { providerById } = await import('../lib/providers.js');
+  const { normalizeScraperResult } = await import('../lib/scraper.js');
+  assert.throws(
+    () => normalizeScraperResult(providerById('spotify'), 'https://open.spotify.com/album/x', { type: 'playlist', tracks: [1, 2] }),
+    /album atau playlist/i,
+  );
+});
+
+test('scraperInspect rejects Nimegami series pages without fetching', async () => {
+  const { scraperInspect } = await import('../lib/scraper.js');
+  await assert.rejects(
+    () => scraperInspect('https://nimegami.id/girls-band-cry-sub-indo/'),
+    /download link/i,
+  );
+});
+
+test('assertPublicUrl rejects private and non-http media URLs', async () => {
+  const { assertPublicUrl } = await import('../lib/fetch.js');
+  await assert.rejects(() => assertPublicUrl('http://127.0.0.1/a'), /private/i);
+  await assert.rejects(() => assertPublicUrl('http://[::1]/a'), /private/i);
+  await assert.rejects(() => assertPublicUrl('http://169.254.169.254/latest/meta-data/'), /private/i);
+  await assert.rejects(() => assertPublicUrl('file:///etc/passwd'), /http/i);
+});
+
+test('zipFiles bundles multiple files into one archive', async () => {
+  const os = await import('node:os');
+  const fsp = await import('node:fs/promises');
+  const path = await import('node:path');
+  const { zipFiles } = await import('../lib/bundle.js');
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'goomysdl-zip-'));
+  try {
+    await fsp.writeFile(path.join(dir, 'a.txt'), 'alpha');
+    await fsp.writeFile(path.join(dir, 'b.txt'), 'beta');
+    const zip = await zipFiles(dir, ['a.txt', 'b.txt'], 'bundle.zip');
+    assert.equal(zip.name, 'bundle.zip');
+    assert.ok(zip.size > 0);
+    const head = await fsp.readFile(path.join(dir, 'bundle.zip'));
+    assert.equal(head.subarray(0, 2).toString(), 'PK');
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true });
+  }
 });

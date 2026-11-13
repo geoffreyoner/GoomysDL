@@ -57,7 +57,13 @@ function formatDuration(seconds) {
 
 function mediaType(entries) {
   if (entries.length > 1) return 'CAROUSEL';
-  return entries[0]?.type === 'image' ? 'PHOTO' : 'VIDEO';
+  const entry = entries[0];
+  if (!entry) return 'MEDIA';
+  if (entry.gallery) return 'COLLECTION';
+  if (entry.type === 'image') return 'PHOTO';
+  if (entry.type === 'audio') return 'AUDIO';
+  if (entry.type === 'file') return 'FILE';
+  return 'VIDEO';
 }
 
 function metaCell(label, value) {
@@ -127,7 +133,8 @@ function renderResult(data) {
     el.singleControls.hidden = false;
     const entry = entries[0];
     if (entry) buildFormats(entry);
-    el.downloadLabel.textContent = entry?.type === 'image' ? 'SAVE IMAGE' : 'EXTRACT MEDIA';
+    const labels = { image: 'SAVE IMAGE', audio: 'SAVE AUDIO', file: 'SAVE FILE' };
+    el.downloadLabel.textContent = entry?.gallery ? 'SAVE COLLECTION' : (labels[entry?.type] || 'EXTRACT MEDIA');
   }
 
   el.result.hidden = false;

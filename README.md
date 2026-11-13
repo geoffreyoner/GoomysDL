@@ -1,6 +1,6 @@
 # GoomysDL
 
-Web app for downloading video and photo from public social media posts. Built on Express, [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg.
+Web app for downloading video, photo, audio, and files from public sources. Built on Express, [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl), [scrapr](https://github.com/coflyn/scrapr), and FFmpeg.
 
 ## Features
 
@@ -10,7 +10,9 @@ Web app for downloading video and photo from public social media posts. Built on
 - Files are stored under random names; original titles stay in memory only
 - Files auto-delete after 10 minutes; analysis expires after 15 minutes
 - Host allowlist (TikTok, Instagram, X/Twitter, YouTube, Facebook, Reddit, Vimeo, Twitch, SoundCloud, Dailymotion)
+- Additional providers through `scrapr`: Spotify tracks, TeraBox, Threads, Pixiv, Douyin, MediaFire, Pixeldrain, Catbox, Google Drive, Krakenfiles, Doodstream, Komiku, Komikindo, Asura Scans, MangaDex, Nimegami, and Sfile
 - Photo posts (Instagram carousels, TikTok slideshows) via `gallery-dl`
+- Multi-file results (comic chapters, galleries, playlists) are bundled into one ZIP
 - Per-IP rate limit, 500 MB max file size, disk-space guard
 
 ## Requirements
@@ -18,11 +20,13 @@ Web app for downloading video and photo from public social media posts. Built on
 - Node.js 24+
 - `yt-dlp` and `ffmpeg` on `PATH`
 - `gallery-dl` on `PATH` for photo posts (`pip install gallery-dl`)
+- `zip` on `PATH` to bundle multi-file results into one archive
+- `@coflyn/scrapr` is installed from npm; optional Playwright/Puppeteer deps are not needed
 
 ## Run locally
 
 ```bash
-npm install
+npm install --omit=optional
 npm test
 npm start
 ```
@@ -39,6 +43,8 @@ Environment variables:
 | `GALLERYDL_PATH` | `gallery-dl` | Path to the gallery-dl binary (photo posts) |
 | `MAX_FILE_MB` | `500` | Max download size per job |
 | `YTDLP_COOKIES` | (none) | Path to a Netscape `cookies.txt` for private/age-gated posts |
+
+Existing yt-dlp/gallery-dl platforms are unchanged. The additional providers use scrapr and are best-effort: third-party endpoints can change or rate-limit requests. Spotify albums/playlists, comic series pages, anime batch pages, generic shortlinks, and ad-gateway unlockers are intentionally out of scope. For Nimegami, paste an episode download link, not the series page.
 
 Instagram and TikTok use browser impersonation automatically. Public Instagram posts often work without a session, but private posts, stories and age-gated content need cookies from a logged-in account:
 
@@ -95,6 +101,7 @@ Also disable Android battery optimization for Termux so the process is not kille
 
 ## Notes
 
-- Public posts only. Private, age-gated or login-required content cannot be fetched.
-- The allowlist intentionally blocks arbitrary URLs to prevent SSRF against internal networks.
+- Public items only. Private, age-gated, login-required, or region-locked content cannot be fetched.
+- The allowlist intentionally blocks arbitrary URLs to prevent SSRF against internal networks. Media URLs returned by scrapers are revalidated before download; private and loopback addresses are rejected.
+- Scraper providers receive the URL you paste. See the privacy page.
 - Only download content you have the right to use, and respect each platform's terms of service.

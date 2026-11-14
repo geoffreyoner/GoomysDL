@@ -222,6 +222,8 @@
   .end-meta{margin-top:16px;font:9px var(--mono);letter-spacing:.16em;color:var(--dim)}
   #replay{margin-top:34px;padding:12px 20px;border:1px solid var(--line);background:transparent;color:var(--dim);font:9px var(--mono);letter-spacing:.18em;cursor:pointer}
   #replay:hover{border-color:var(--ink);color:var(--ink)}
+  .render-mode .scene,.render-mode .toast,.render-mode .end{transition:none}
+  .render-mode #replay{visibility:hidden}
 </style>
 </head>
 <body>
@@ -445,7 +447,7 @@
   const toastTitle=document.getElementById('toast-title');
   const toastSub=document.getElementById('toast-sub');
   let toastMode='';
-  let startedAt=0,raf=0,current=null;
+  let startedAt=0,raf=0,current=null,renderMode=false;
 
   function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
   function pad(n){return String(n).padStart(2,'0')}
@@ -469,8 +471,22 @@
     inspectArc.style.strokeDashoffset=`${151*progress}`;
     inspectArc.style.stroke=minutes<=1?'var(--red)':'';
   }
-  function tick(now){
-    const t=Math.min(TOTAL,now-startedAt);
+  function seekAnimations(t){
+    if(current){
+      const rel=t-current.start;
+      for(const a of current.el.getAnimations({subtree:true})){a.pause();a.currentTime=rel}
+    }
+    if(toastMode){
+      const start=toastMode==='inspect'?26550:66050;
+      const rel=Math.max(0,t-start);
+      for(const a of toast.getAnimations({subtree:true})){a.pause();a.currentTime=rel}
+    }
+    if(end.classList.contains('show')){
+      const rel=Math.max(0,t-66500);
+      for(const a of end.getAnimations({subtree:true})){a.pause();a.currentTime=rel}
+    }
+  }
+  function render(t){
     let scene=timing[0];
     for(const item of timing) if(t>=item.start) scene=item;
     if(scene!==current){
@@ -486,12 +502,19 @@
     if(t>=26550 && t<29550) setToast('inspect','INSPECT EXPIRED','TEMP METADATA DELETED ON SERVER · GOOMYSDL');
     else if(t>=66050 && t<69050) setToast('file','FILE DELETED ON SERVER','10 MIN TTL EXPIRED · GOOMYSDL');
     else setToast('','','');
-    if(t>=66500) end.classList.add('show');
+    end.classList.toggle('show',t>=66500);
+    if(renderMode) seekAnimations(t);
+  }
+  function tick(now){
+    const t=Math.min(TOTAL,now-startedAt);
+    render(t);
     if(t>=TOTAL) return;
     raf=requestAnimationFrame(tick);
   }
   function start(){
     cancelAnimationFrame(raf);
+    renderMode=false;
+    stage.classList.remove('render-mode');
     end.classList.remove('show');
     toastMode='';
     toast.classList.remove('show');
@@ -501,6 +524,11 @@
     void stage.offsetWidth;
     raf=requestAnimationFrame(tick);
   }
+  window.renderTotal=TOTAL;
+  window.renderAt=ms=>{
+    if(!renderMode){renderMode=true;stage.classList.add('render-mode');cancelAnimationFrame(raf)}
+    render(Math.max(0,Math.min(TOTAL,ms)));
+  };
   document.getElementById('replay').addEventListener('click',start);
   addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r') start()});
   addEventListener('resize',fit);

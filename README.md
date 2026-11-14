@@ -16,6 +16,12 @@ Web app for downloading video, photo, audio, and files from public sources. Buil
 - Supported page has a per-platform TEST button that checks extraction of a sample link (no download)
 - Per-IP rate limit, 500 MB max file size, disk-space guard
 
+## Demo
+
+[![GoomysDL demo video](docs/demo-video-poster.jpg)](docs/demo-video.mp4)
+
+70-second server → client walkthrough (MP4, no audio). Source animation: [docs/demo-video.html](docs/demo-video.html).
+
 ## Requirements
 
 - Node.js 24+

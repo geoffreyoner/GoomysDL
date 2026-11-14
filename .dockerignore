@@ -4,3 +4,7 @@ test
 .git
 *.log
 .DS_Store
+.env
+.env.*
+cookies*.txt
+*.cookies.txt

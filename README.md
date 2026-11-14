@@ -64,9 +64,11 @@ Export cookies from your browser in Netscape format. Cookies are session credent
 ## Docker
 
 ```bash
-docker build -t goomysdl .
-docker run --rm -p 3000:3000 goomysdl
+echo 'DOMAIN=dl.example.com' > .env
+docker compose up -d --build
 ```
+
+Point the domain's DNS record to the VPS and open ports `80`/`443`. Caddy obtains HTTPS automatically. Set `MAX_FILE_MB` in `.env` if needed; for cookies, uncomment the volume/environment lines in `docker-compose.yml`.
 
 The image runs as a non-root user. Do not mount a persistent volume over `downloads/`: the app wipes it on startup and the encryption keys only live in memory.
 

@@ -99,11 +99,11 @@ Logs are written to `~/.goomysdl/`. The quick-tunnel URL changes on every restar
 
 The public URL then stays `https://dl.example.com` across restarts.
 
-For auto-start on boot, install the **Termux:Boot** app and copy the boot script:
+For auto-start on boot, install the **Termux:Boot** app and link the boot script:
 
 ```bash
-cp scripts/termux-boot.sh ~/.termux/boot/goomysdl
-chmod +x ~/.termux/boot/goomysdl
+mkdir -p ~/.termux/boot
+ln -sf "$PWD/scripts/termux-boot.sh" ~/.termux/boot/goomysdl
 ```
 
 Also disable Android battery optimization for Termux so the process is not killed.

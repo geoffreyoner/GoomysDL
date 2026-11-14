@@ -8,7 +8,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl python3 python3-pip zip \
   && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux" -o /usr/local/bin/yt-dlp \
   && chmod +x /usr/local/bin/yt-dlp \
-  && pip3 install --break-system-packages --no-cache-dir gallery-dl \
+  && pip3 install --break-system-packages --no-cache-dir gallery-dl curl_cffi \
   && apt-get purge -y curl \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*

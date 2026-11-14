@@ -27,6 +27,7 @@ Web app for downloading video, photo, audio, and files from public sources. Buil
 - Node.js 24+
 - `yt-dlp` and `ffmpeg` on `PATH`
 - `gallery-dl` on `PATH` for photo posts (`pip install gallery-dl`)
+- `curl_cffi` in yt-dlp's Python environment for TikTok/Instagram impersonation (`pip install curl_cffi`)
 - `zip` on `PATH` to bundle multi-file results into one archive
 - `@coflyn/scrapr` is installed from npm; optional Playwright/Puppeteer deps are not needed
 

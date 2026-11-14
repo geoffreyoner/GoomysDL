@@ -175,7 +175,7 @@ test('TikTok and Instagram downloads force impersonation', () => {
     'https://www.instagram.com/reel/abc/',
   ]) {
     const args = buildDownloadArgs({ jobDir: '/tmp/job', url, selector: 'b', audio: false });
-    assert.equal(args[args.indexOf('--impersonate') + 1], 'Chrome-133');
+    assert.equal(args[args.indexOf('--impersonate') + 1], 'Chrome-152');
   }
 
   const custom = buildDownloadArgs({

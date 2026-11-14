@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoomysDL — Server to Client</title>
+<style>
+  :root{
+    --bg:#0a0a0a;--panel:#0e0e0d;--panel2:#141412;--line:#262624;--line2:#1b1b1a;
+    --ink:#e9e7e1;--dim:#5c5c56;--dim2:#8a887f;--green:#7bd88f;--red:#f07171;--yellow:#e3b341;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    --sans:Inter,"Helvetica Neue",Arial,sans-serif;--serif:Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+  body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+  #viewport{position:fixed;inset:0;display:grid;place-items:center;background:#000}
+  #stage{position:absolute;top:50%;left:50%;width:1920px;height:1080px;transform:translate(-50%,-50%);transform-origin:center;overflow:hidden;background:var(--bg)}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(to right,var(--line2) 1px,transparent 1px),linear-gradient(to bottom,var(--line2) 1px,transparent 1px);background-size:80px 80px;opacity:.6;-webkit-mask-image:radial-gradient(circle at 50% 45%,#000 18%,transparent 76%);mask-image:radial-gradient(circle at 50% 45%,#000 18%,transparent 76%)}
+  .vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,transparent 38%,rgba(0,0,0,.62) 100%);pointer-events:none}
+  .chrome{position:absolute;z-index:20;top:0;left:80px;right:80px;height:92px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);font:10px var(--mono);letter-spacing:.16em;color:var(--dim)}
+  .brand{display:flex;gap:14px;color:var(--ink)}.brand b{font-weight:500;letter-spacing:.18em}.brand span{color:var(--dim)}
+  .chrome-right{display:flex;gap:28px;font-variant-numeric:tabular-nums}
+  .footer{position:absolute;z-index:20;left:80px;right:80px;bottom:0;height:76px;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:18px}
+  .progress{height:1px;background:var(--line);margin-bottom:13px}
+  #progress-fill{height:1px;width:0;background:var(--ink);box-shadow:0 0 8px rgba(233,231,225,.35)}
+  .footer-meta{display:flex;justify-content:space-between;font:9px var(--mono);letter-spacing:.15em;color:var(--dim)}
+  .scene{position:absolute;inset:0;z-index:2;padding:128px 80px 110px;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .scene.active{opacity:1}
+  .micro{font:10px var(--mono);letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+  .kicker{display:flex;align-items:center;gap:14px;font:10px var(--mono);letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+  .kicker:before{content:"";width:36px;height:1px;background:var(--dim)}
+  h2{margin:22px 0 0;font-size:64px;line-height:.96;font-weight:500;letter-spacing:-.045em;max-width:1050px}
+  h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--dim2)}
+  .cap{margin-top:20px;font:10px var(--mono);letter-spacing:.14em;color:var(--dim)}
+  .panel{background:var(--panel);border:1px solid var(--line);position:relative}
+  .ptop{display:flex;justify-content:space-between;gap:16px;padding:13px 17px;border-bottom:1px solid var(--line);font:9px var(--mono);letter-spacing:.15em;color:var(--dim)}
+  .pbody{padding:22px}
+  .green{color:var(--green)!important}.red{color:var(--red)!important}.yellow{color:var(--yellow)!important}.dim{color:var(--dim)!important}.ink{color:var(--ink)!important}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:7px;background:var(--green);vertical-align:1px}
+  pre{margin:0;font:14px/1.65 var(--mono);white-space:pre-wrap;color:var(--ink)}
+  .play .rise{animation:rise .55s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+  .play .fade{animation:fade .5s ease var(--d,0s) both}
+  .play .sr{animation:sr .55s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+  .play .sl{animation:sl .55s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+  .play .gx{animation:gx .7s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes sr{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+  @keyframes sl{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+  @keyframes gx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+  @keyframes travel{from{left:-4px;opacity:0}12%{opacity:1}82%{opacity:1}to{left:calc(100% - 4px);opacity:0}}
+  @keyframes travelBack{from{left:calc(100% - 4px);opacity:0}12%{opacity:1}82%{opacity:1}to{left:-4px;opacity:0}}
+  @keyframes fillBar{from{width:0}to{width:var(--w,50%)}}
+  @keyframes dimCard{from{opacity:1}to{opacity:.3}}
+  @keyframes scan{0%{top:58px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:calc(100% - 58px);opacity:0}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  @keyframes typeReveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+  #s-title{display:flex;align-items:center}
+  .title-wrap{width:100%;margin-top:-34px}
+  .hero{margin:14px 0 0;font:400 172px/.82 var(--serif);letter-spacing:-.075em}.hero span{color:var(--dim)}
+  .title-rule{width:520px;height:1px;background:var(--line);margin:32px 0 24px;transform-origin:left center}
+  .title-sub{font:12px var(--mono);letter-spacing:.22em;color:var(--dim2)}.title-sub i{color:var(--green);font-style:normal;margin:0 10px}
+  .urlbar{width:820px;height:54px;margin-top:42px;padding:0 18px;display:flex;align-items:center;gap:14px;border:1px solid var(--line);background:var(--panel);font:13px var(--mono);color:var(--dim)}
+  .urlbar-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px rgba(123,216,143,.55);flex:none}
+  .urlbar-text{flex:1;overflow:hidden;white-space:nowrap;clip-path:inset(0 100% 0 0)}
+  .play .urlbar-text{animation:typeReveal 1.2s steps(38) .95s both}
+  .urlbar-key{flex:none;padding:4px 6px;border:1px solid var(--line);color:var(--dim);font-size:9px}
+  .title-end{margin-top:34px;font:10px var(--mono);letter-spacing:.2em;color:var(--dim)}
+
+  .req{margin-top:34px;display:grid;grid-template-columns:minmax(0,1fr) 170px minmax(0,1.12fr);align-items:stretch}
+  .browser-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:20px;border:1px solid var(--line);background:#0a0a09;font:11px var(--mono);color:var(--dim)}
+  .dots{display:flex;gap:5px;margin-right:4px}.dots i{display:block;width:6px;height:6px;border-radius:50%;border:1px solid var(--dim)}
+  .browser-bar .url{flex:1;overflow:hidden;white-space:nowrap;color:var(--ink)}.enter{color:var(--dim);font-size:9px;border:1px solid var(--line);padding:2px 4px}
+  .browser-foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font:9px var(--mono);letter-spacing:.12em;color:var(--dim)}
+  .flow{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:0 14px}
+  .flow-label{font:8px var(--mono);letter-spacing:.16em;color:var(--dim)}
+  .flow-line{position:relative;width:100%;height:1px;background:repeating-linear-gradient(90deg,var(--line) 0 7px,transparent 7px 13px)}
+  .packet{position:absolute;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--ink);box-shadow:0 0 14px rgba(233,231,225,.75)}
+  .packet.green{background:var(--green);box-shadow:0 0 14px rgba(123,216,143,.8)}
+  .play .packet.out{animation:travel 1.7s 1.15s cubic-bezier(.4,0,.2,1) both}
+  .play .packet.back{animation:travelBack 1.4s 4.35s cubic-bezier(.4,0,.2,1) both}
+  .logline{font:12px/1.9 var(--mono);color:var(--dim)}.play .logline{animation:sr .35s var(--d,0s) both}
+  .ok{display:inline-block;margin-left:8px;color:var(--green);font-size:9px;letter-spacing:.1em}
+  .verdict{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:12px 14px;border:1px solid var(--line);background:var(--panel2);font:10px var(--mono);letter-spacing:.12em;color:var(--dim)}
+  .verdict b{color:var(--green);font-weight:500;letter-spacing:.16em}
+  .reject{margin-top:18px;display:flex;align-items:center;gap:14px;padding:10px 14px;border-left:2px solid var(--red);background:rgba(240,113,113,.05);font:11px var(--mono);letter-spacing:.06em;color:var(--dim)}
+  .reject b{color:var(--red);font-weight:500;letter-spacing:.14em}
+
+  .eng{position:relative;margin-top:32px;display:grid;grid-template-columns:1.1fr .9fr;gap:28px}
+  .eng-cards{display:flex;flex-direction:column;gap:12px}
+  .eng-card{position:relative;display:grid;grid-template-columns:46px 1fr auto;align-items:center;gap:16px;padding:19px 20px;background:var(--panel);border:1px solid var(--line)}
+  .eng-card.is-active{border-color:rgba(123,216,143,.55)}
+  .eng-card.is-active:after{content:"SELECTED";position:absolute;top:-1px;right:-1px;padding:5px 8px;background:var(--green);color:#0a0a0a;font:8px var(--mono);letter-spacing:.12em;opacity:0}
+  .play .eng-card.is-active:after{animation:fade .3s 2.8s both}
+  .route-link{position:absolute;left:54%;top:40px;width:32px;height:1px;background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 8px)}
+  .route-link i{position:absolute;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(123,216,143,.8);opacity:0}
+  .play .route-link i{animation:travel 1.8s 3.4s cubic-bezier(.4,0,.2,1) infinite}
+  .eng-num{font:10px var(--mono);color:var(--dim)}.eng-name{font:25px var(--mono);letter-spacing:.02em}
+  .eng-desc{margin-top:7px;font:9px var(--mono);letter-spacing:.08em;color:var(--dim)}
+  .eng-tag{font:8px var(--mono);letter-spacing:.14em;color:var(--dim);border:1px solid var(--line);padding:5px 7px}
+  .eng-card.is-active .eng-tag{color:var(--green);border-color:rgba(123,216,143,.35)}
+  .play .eng-card{animation:rise .55s var(--d,0s) both}
+  .play .eng-card:not(.is-active){animation:rise .55s var(--d,0s) both,dimCard .6s 3.15s both}
+  .play .eng-card.is-active{animation:rise .55s var(--d,0s) both,activePulse 2.8s 3.8s infinite}
+  @keyframes activePulse{0%,100%{box-shadow:0 0 0 rgba(123,216,143,0)}50%{box-shadow:0 0 26px rgba(123,216,143,.14)}}
+  .result{align-self:start}.result-title{font-size:25px;letter-spacing:-.02em;line-height:1.15}
+  .result-meta{margin-top:8px;font:10px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+  .chip{padding:7px 9px;border:1px solid var(--line);font:8px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .chip.on{border-color:var(--ink);color:var(--ink)}.play .chip{animation:fade .35s calc(2.7s + var(--i,0) * .1s) both}
+  .ttl-row{display:flex;align-items:center;gap:15px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+  .ttl-ring{width:58px;height:58px;transform:rotate(-90deg)}.ttl-ring circle{fill:none;stroke-width:2}
+  .ttl-ring .track{stroke:var(--line)}.ttl-ring .arc{stroke:var(--green);stroke-dasharray:151;stroke-dashoffset:0}
+  .play .ttl-ring .arc{animation:ttlGlow 2.4s 2.6s ease-in-out infinite}
+  @keyframes ttlGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(123,216,143,0))}50%{filter:drop-shadow(0 0 5px rgba(123,216,143,.45))}}
+  .ttl-copy b{display:block;font:10px var(--mono);letter-spacing:.12em;color:var(--dim);font-weight:400}
+  .ttl-copy span{display:block;margin-top:6px;font:18px var(--mono);color:var(--ink)}
+  .inspect-id{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font:9px var(--mono);letter-spacing:.08em;color:var(--dim)}
+  .result-note{margin-top:12px;font:9px var(--mono);letter-spacing:.12em;color:var(--yellow)}
+
+  .q{margin-top:32px;display:grid;grid-template-columns:.9fr 1.05fr 1.05fr;gap:18px;align-items:start}
+  .format-list{display:flex;flex-direction:column;gap:8px}
+  .format-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border:1px solid var(--line);background:var(--panel);font:11px var(--mono);color:var(--dim)}
+  .format-row.on{border-color:var(--ink);background:var(--panel2);color:var(--ink)}
+  .format-row small{font-size:8px;letter-spacing:.1em;color:var(--dim)}.play .format-row{animation:sr .45s var(--d,0s) both}
+  .start-btn{margin-top:14px;padding:13px 15px;border:1px solid var(--ink);background:var(--ink);color:#0a0a0a;text-align:center;font:10px var(--mono);letter-spacing:.16em}
+  .job-list{display:flex;flex-direction:column;gap:8px}
+  .job{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line);background:var(--panel2);font:10px var(--mono);color:var(--dim)}
+  .job b{color:var(--ink);font-weight:400;letter-spacing:.05em}.job .state{font-size:8px;letter-spacing:.12em}
+  .job.run .state{color:var(--green)}.job.wait .state{color:var(--yellow)}.play .job{animation:sl .45s var(--d,0s) both}
+  .queue-note{margin-top:14px;display:flex;justify-content:space-between;font:9px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .poll{display:inline-flex;align-items:center;gap:7px;color:var(--green)}.poll i{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1s infinite}
+  .workers{display:flex;flex-direction:column;gap:10px}
+  .worker{padding:13px 14px;border:1px solid var(--line);background:var(--panel)}
+  .worker-head{display:flex;justify-content:space-between;font:9px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .worker-head b{color:var(--green);font-weight:400}
+  .bar{height:3px;margin-top:12px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--ink)}
+  .play .worker .bar i{animation:fillBar 4.2s 1.3s cubic-bezier(.2,.7,.2,1) both}
+  .play .worker:nth-child(2) .bar i{animation-delay:1.65s}
+  .worker-log{margin-top:11px;font:8px/1.6 var(--mono);color:var(--dim)}
+
+  .guard{margin-top:32px;display:grid;grid-template-columns:.9fr 1.08fr 1.02fr;gap:18px;align-items:start}
+  .source-host{font:22px var(--mono);letter-spacing:-.01em}
+  .source-path{margin-top:8px;font:10px/1.5 var(--mono);color:var(--dim);overflow-wrap:anywhere}
+  .source-meta{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font:9px var(--mono);letter-spacing:.1em;color:var(--green)}
+  .check-list{display:flex;flex-direction:column;gap:10px}
+  .check-item{display:flex;align-items:center;gap:10px;font:10px var(--mono);color:var(--dim)}
+  .check-item .tick{display:grid;place-items:center;width:18px;height:18px;border:1px solid rgba(123,216,143,.4);color:var(--green);font-size:9px}
+  .play .check-item{animation:sr .4s var(--d,0s) both}.play .check-item .tick{animation:pop .3s calc(var(--d,0s) + .15s) both}
+  .blocked{margin-top:18px;padding:10px 12px;border:1px solid rgba(240,113,113,.35);background:rgba(240,113,113,.05);font:9px/1.6 var(--mono);color:var(--dim)}
+  .blocked b{color:var(--red);font-weight:500;letter-spacing:.1em}
+  .file-list{display:flex;flex-direction:column;gap:7px}
+  .file-row{display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid var(--line);background:var(--panel2);font:9px var(--mono);color:var(--dim)}
+  .file-row b{color:var(--ink);font-weight:400}.play .file-row{animation:sl .4s var(--d,0s) both}
+  .zip-card{margin-top:14px;padding:14px;border:1px solid rgba(123,216,143,.4);background:rgba(123,216,143,.04)}
+  .zip-card b{display:block;font:13px var(--mono);color:var(--green);font-weight:400;letter-spacing:.06em}
+  .zip-card span{display:block;margin-top:6px;font:8px var(--mono);letter-spacing:.1em;color:var(--dim)}
+
+  .seal{margin-top:38px;display:grid;grid-template-columns:1fr 260px 1fr;gap:22px;align-items:center}
+  .filecard{position:relative;height:330px;padding:18px;border:1px solid var(--line);background:var(--panel);overflow:hidden}
+  .filecard-top{display:flex;justify-content:space-between;font:9px var(--mono);letter-spacing:.12em;color:var(--dim)}
+  .file-lines{display:flex;flex-direction:column;gap:11px;margin-top:30px}
+  .file-lines i{display:block;height:5px;background:var(--line)}
+  .file-lines i:nth-child(1){width:88%}.file-lines i:nth-child(2){width:72%}.file-lines i:nth-child(3){width:94%}
+  .file-lines i:nth-child(4){width:61%}.file-lines i:nth-child(5){width:79%}.file-lines i:nth-child(6){width:46%}
+  .file-label{position:absolute;left:18px;right:18px;bottom:18px;font:9px var(--mono);letter-spacing:.08em;color:var(--dim)}
+  .scan{position:absolute;left:0;right:0;top:58px;height:2px;background:var(--green);box-shadow:0 0 18px rgba(123,216,143,.7);opacity:0}
+  .play .scan{animation:scan 2.2s 1.15s cubic-bezier(.4,0,.2,1) both}
+  .lock-wrap{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .lock{width:126px;height:126px;color:var(--ink)}
+  .lock .shackle{fill:none;stroke:currentColor;stroke-width:7}.lock .body{fill:var(--panel2);stroke:currentColor;stroke-width:5}.lock .key{fill:none;stroke:var(--green);stroke-width:5}
+  .lock-label{margin-top:18px;font:12px var(--mono);letter-spacing:.12em;color:var(--green)}
+  .lock-sub{margin-top:7px;font:8px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .sealed{border-color:rgba(123,216,143,.35)}
+  .hex{margin-top:32px;font:12px/2 var(--mono);letter-spacing:.06em;color:var(--dim);word-spacing:8px}
+  .cmp{display:flex;align-items:center;gap:18px;margin-top:22px;padding:12px 16px;border:1px solid var(--line);background:var(--panel)}
+  .cmp div{flex:1;min-width:0}
+  .cmp span{display:block;font:8px var(--mono);letter-spacing:.12em;color:var(--dim)}
+  .cmp b{display:block;margin-top:5px;font:12px var(--mono);letter-spacing:.02em;color:var(--ink);font-weight:400;overflow-wrap:anywhere}
+  .cmp i{font-style:normal;color:var(--green);font:16px var(--mono)}
+  .cmp div:last-child b{color:var(--green)}
+  .seal-chips{margin-top:12px;display:flex;gap:10px}
+  .chip2{flex:1;padding:11px 12px;border:1px solid var(--line);background:var(--panel);font:9px var(--mono);letter-spacing:.1em;color:var(--dim);text-align:center}
+  .chip2 b{color:var(--ink);font-weight:400}
+
+  .deliver{margin-top:34px;display:grid;grid-template-columns:1fr 170px 1fr;align-items:center}
+  .delivery-server .pbody{min-height:236px}
+  .request-line{font:12px/1.8 var(--mono);color:var(--ink);overflow-wrap:anywhere}.request-line span{color:var(--dim)}
+  .decrypt-line{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font:9px/1.9 var(--mono);letter-spacing:.08em;color:var(--dim)}
+  .decrypt-line b{color:var(--green);font-weight:400}
+  .download-card{padding:22px;border:1px solid var(--line);background:var(--panel);min-height:236px}
+  .download-name{font:24px var(--mono);letter-spacing:-.01em}.download-meta{margin-top:8px;font:9px var(--mono);letter-spacing:.1em;color:var(--dim)}
+  .name-source{margin-top:7px;font:8px var(--mono);letter-spacing:.1em;color:var(--green)}
+  .download-bar{height:5px;margin-top:26px;background:var(--line);overflow:hidden}.download-bar i{display:block;height:100%;width:0;background:var(--green)}
+  .play .download-bar i{animation:fillBar 2.6s 1.05s cubic-bezier(.2,.7,.2,1) both;--w:100%}
+  .saved{margin-top:16px;font:10px var(--mono);letter-spacing:.14em;color:var(--green)}.play .saved{animation:fade .4s 3.8s both}
+  .delivery-flow{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 12px}
+  .play .delivery-flow .packet.green{animation:travel 1.8s 1.1s cubic-bezier(.4,0,.2,1) both}
+  .ttl-panel{margin-top:22px;display:flex;align-items:center;gap:24px;padding:16px 18px;border:1px solid var(--line);background:var(--panel)}
+  .ttl-label{font:9px var(--mono);letter-spacing:.14em;color:var(--dim)}
+  #ttl{min-width:76px;font:25px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+  .ttl-track{flex:1;height:2px;background:var(--line);overflow:hidden}.ttl-track i{display:block;height:100%;width:100%;background:var(--yellow)}
+  .deleted{min-width:130px;font:9px var(--mono);letter-spacing:.14em;color:var(--dim);text-align:right}.deleted.on{color:var(--red)}
+
+  .toast{position:absolute;z-index:35;top:116px;right:80px;width:370px;padding:15px 16px 16px;border:1px solid rgba(240,113,113,.45);background:rgba(14,14,13,.96);display:flex;gap:13px;align-items:flex-start;opacity:0;transform:translateX(26px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;box-shadow:0 16px 40px rgba(0,0,0,.45);overflow:hidden}
+  .toast.show{opacity:1;transform:none}
+  .toast-icon{display:grid;place-items:center;width:24px;height:24px;border:1px solid rgba(240,113,113,.55);color:var(--red);font:13px var(--mono);flex:none}
+  .toast b{display:block;font:11px var(--mono);letter-spacing:.12em;color:var(--ink);font-weight:500}
+  .toast span{display:block;margin-top:7px;font:8px var(--mono);letter-spacing:.1em;color:var(--dim);line-height:1.5}
+  .toast-bar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--red)}
+  .toast.show .toast-bar{animation:toastBar 3s linear both}
+  @keyframes toastBar{from{width:100%}to{width:0}}
+  .end{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:rgba(10,10,10,.95);opacity:0;pointer-events:none;transition:opacity .45s ease}
+  .end.show{opacity:1;pointer-events:auto}.end-inner{text-align:center;transform:translateY(8px)}
+  .end.show .end-inner{animation:rise .5s .1s both}
+  .end-logo{margin-top:18px;font:400 126px/.9 var(--serif);letter-spacing:-.07em}.end-logo span{color:var(--dim)}
+  .end-line{width:440px;height:1px;margin:30px auto;background:var(--line)}
+  .end-copy{font:12px var(--mono);letter-spacing:.28em;color:var(--ink)}
+  .end-meta{margin-top:16px;font:9px var(--mono);letter-spacing:.16em;color:var(--dim)}
+  #replay{margin-top:34px;padding:12px 20px;border:1px solid var(--line);background:transparent;color:var(--dim);font:9px var(--mono);letter-spacing:.18em;cursor:pointer}
+  #replay:hover{border-color:var(--ink);color:var(--ink)}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+  <div class="grid"></div><div class="vignette"></div>
+  <div class="chrome">
+    <div class="brand"><b>GOOMYSDL</b><span>/ SERVER → CLIENT</span></div>
+    <div class="chrome-right"><span id="scene-label">00 / TITLE</span><span id="timecode">00:00</span></div>
+  </div>
+
+  <section class="scene" id="s-title" data-label="00 / TITLE">
+    <div class="title-wrap">
+      <div class="micro rise">PUBLIC MEDIA DOWNLOADER / 2026</div>
+      <h1 class="hero rise" style="--d:.18s">Goomys<span>DL</span></h1>
+      <div class="title-rule gx" style="--d:.45s"></div>
+      <div class="title-sub rise" style="--d:.6s">SERVER <i>→</i> CLIENT PIPELINE</div>
+      <div class="urlbar rise" style="--d:.9s"><span class="urlbar-dot"></span><span class="urlbar-text">https://x.com/geoff/status/1784...</span><span class="urlbar-key">ENTER</span></div>
+      <div class="title-end fade" style="--d:2.35s">PASTE A LINK. PICK A FORMAT. SAVE THE FILE.</div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-request" data-label="01 / INSPECT">
+    <div class="kicker rise">01 / INSPECT</div>
+    <h2 class="rise" style="--d:.12s">Validate before<br><em>touching the network.</em></h2>
+    <div class="req">
+      <div class="panel rise" style="--d:.55s">
+        <div class="ptop"><span>CLIENT / BROWSER</span><span class="green">● LOCAL</span></div>
+        <div class="pbody">
+          <div class="browser-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">https://x.com/geoff/status/1784...</span><span class="enter">↵</span></div>
+          <pre><span class="dim">POST</span> /api/inspect
+{
+  <span class="dim">"url"</span>: <span class="green">"https://x.com/..."</span>
+}</pre>
+          <div class="browser-foot"><span><span class="dot"></span>CLIENT READY</span><span class="dim">FETCH JSON</span></div>
+        </div>
+      </div>
+      <div class="flow">
+        <span class="flow-label">JSON</span>
+        <div class="flow-line"><i class="packet out"></i><i class="packet back green"></i></div>
+        <span class="flow-label">RESPONSE</span>
+      </div>
+      <div class="panel rise" style="--d:.75s">
+        <div class="ptop"><span>SERVER / EXPRESS</span><span class="green">● API</span></div>
+        <div class="pbody">
+          <div class="logline" style="--d:1.25s">› POST <span class="dim">/api/inspect</span></div>
+          <div class="logline" style="--d:1.75s">› protocol <span class="ink">https</span><span class="ok">PASS</span></div>
+          <div class="logline" style="--d:2.2s">› host allowlist <span class="ink">x.com</span><span class="ok">PASS</span></div>
+          <div class="logline" style="--d:2.65s">› provider <span class="ink">twitter</span><span class="ok">PASS</span></div>
+          <div class="logline" style="--d:3.1s">› extract <span class="dim">metadata only</span><span class="ok">OK</span></div>
+          <div class="verdict rise" style="--d:4.1s"><span>VALID · INSPECTID ISSUED</span><b>TTL 15 MIN</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="reject rise" style="--d:5.6s"><b>✕ BLOCKED</b><span>https://localhost/... — host not allowed</span></div>
+    <div class="cap fade" style="--d:4.7s">NO MEDIA IS DOWNLOADED YET · ONLY METADATA AND FORMAT OPTIONS</div>
+  </section>
+
+  <section class="scene" id="s-engine" data-label="02 / ROUTE">
+    <div class="kicker rise">02 / ROUTE</div>
+    <h2 class="rise" style="--d:.12s">Pick the right engine.<br><em>No guessing.</em></h2>
+    <div class="eng">
+      <div class="route-link"><i></i></div>
+      <div class="eng-cards">
+        <div class="eng-card is-active" style="--d:.45s"><div class="eng-num">01</div><div><div class="eng-name">YT-DLP</div><div class="eng-desc">TIKTOK · YOUTUBE · X · FACEBOOK</div></div><div class="eng-tag">VIDEO</div></div>
+        <div class="eng-card" style="--d:.6s"><div class="eng-num">02</div><div><div class="eng-name">GALLERY-DL</div><div class="eng-desc">INSTAGRAM · THREADS · PIXIV</div></div><div class="eng-tag">PHOTO</div></div>
+        <div class="eng-card" style="--d:.75s"><div class="eng-num">03</div><div><div class="eng-name">SCRAPR</div><div class="eng-desc">SPOTIFY · SFILE · COMIC · ANIME</div></div><div class="eng-tag">AUTO</div></div>
+      </div>
+      <div class="panel result rise" style="--d:2.35s">
+        <div class="ptop"><span>INSPECT RESULT</span><span class="green">TTL 15:00</span></div>
+        <div class="pbody">
+          <div class="result-title">PUBLIC POST / VIDEO</div>
+          <div class="result-meta">1080P · 24.3 MB · MP4</div>
+          <div class="chips">
+            <span class="chip on" style="--i:0">BEST / MP4</span><span class="chip" style="--i:1">1080P</span><span class="chip" style="--i:2">720P</span><span class="chip" style="--i:3">AUDIO</span>
+          </div>
+          <div class="ttl-row">
+            <svg class="ttl-ring" viewBox="0 0 58 58"><circle class="track" cx="29" cy="29" r="24"></circle><circle class="arc" id="inspect-arc" cx="29" cy="29" r="24"></circle></svg>
+            <div class="ttl-copy"><b>INSPECT TTL</b><span id="inspect-ttl">15:00</span></div>
+          </div>
+          <div class="inspect-id">inspectId 7f3a…9c</div>
+          <div class="result-note">METADATA ONLY · NOTHING DOWNLOADED YET</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-queue" data-label="03 / QUEUE">
+    <div class="kicker rise">03 / QUEUE</div>
+    <h2 class="rise" style="--d:.12s">Two slots.<br><em>One clean queue.</em></h2>
+    <div class="q">
+      <div class="panel rise" style="--d:.4s">
+        <div class="ptop"><span>FORMAT SELECT</span><span>01</span></div>
+        <div class="pbody">
+          <div class="format-list">
+            <div class="format-row on sr" style="--d:.75s"><span>BEST / MP4</span><small>SELECTED</small></div>
+            <div class="format-row sr" style="--d:.85s"><span>1080P / MP4</span><small>VIDEO</small></div>
+            <div class="format-row sr" style="--d:.95s"><span>720P / MP4</span><small>VIDEO</small></div>
+            <div class="format-row sr" style="--d:1.05s"><span>AUDIO / M4A</span><small>AUDIO</small></div>
+          </div>
+          <div class="start-btn rise" style="--d:1.35s">START DOWNLOAD →</div>
+        </div>
+      </div>
+      <div class="panel rise" style="--d:.55s">
+        <div class="ptop"><span>POST /api/download</span><span class="green">ACCEPTED</span></div>
+        <div class="pbody">
+          <div class="job-list">
+            <div class="job run sl" style="--d:1.8s"><span>job <b>7f3a</b></span><span class="state">RUNNING</span></div>
+            <div class="job run sl" style="--d:1.95s"><span>job <b>b21c</b></span><span class="state">RUNNING</span></div>
+            <div class="job wait sl" style="--d:2.1s"><span>job <b>9d04</b></span><span class="state">QUEUED</span></div>
+          </div>
+          <div class="queue-note rise" style="--d:2.55s"><span>MAX 2 CONCURRENT</span><span class="poll"><i></i>POLLING</span></div>
+        </div>
+      </div>
+      <div class="panel rise" style="--d:.7s">
+        <div class="ptop"><span>WORKERS</span><span>LIVE</span></div>
+        <div class="pbody">
+          <div class="workers">
+            <div class="worker"><div class="worker-head"><span>WORKER 01</span><b>RUNNING</b></div><div class="bar"><i style="--w:64%"></i></div><div class="worker-log">[download] 64% · 15.4 MB/s<br>[ffmpeg] merging audio…</div></div>
+            <div class="worker"><div class="worker-head"><span>WORKER 02</span><b>RUNNING</b></div><div class="bar"><i style="--w:31%"></i></div><div class="worker-log">[download] 31% · 8.1 MB/s<br>[scraper] resolving source…</div></div>
+          </div>
+          <div class="queue-note rise" style="--d:2.9s"><span>GET /api/jobs/:id</span><span class="dim">1S POLL</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-download" data-label="04 / GUARD + FETCH">
+    <div class="kicker rise">04 / GUARD + FETCH</div>
+    <h2 class="rise" style="--d:.12s">Fetch. Check.<br><em>Contain.</em></h2>
+    <div class="guard">
+      <div class="panel rise" style="--d:.4s">
+        <div class="ptop"><span>SOURCE URL</span><span class="green">RESOLVED</span></div>
+        <div class="pbody"><div class="source-host">cdn.example.net</div><div class="source-path">/media/video.mp4<br>?token=••••••••</div><div class="source-meta">18.2 MB · VIDEO + AUDIO</div></div>
+      </div>
+      <div class="panel rise" style="--d:.55s">
+        <div class="ptop"><span>GUARD LIST</span><span>SSRF SAFE</span></div>
+        <div class="pbody">
+          <div class="check-list">
+            <div class="check-item" style="--d:1.1s"><span class="tick">✓</span><span>DNS resolved</span></div>
+            <div class="check-item" style="--d:1.45s"><span class="tick">✓</span><span>Private / loopback IP blocked</span></div>
+            <div class="check-item" style="--d:1.8s"><span class="tick">✓</span><span>Redirects re-validated</span></div>
+            <div class="check-item" style="--d:2.15s"><span class="tick">✓</span><span>Size cap 500 MB</span></div>
+            <div class="check-item" style="--d:2.5s"><span class="tick">✓</span><span>Safe fetch · no cookies to CDN</span></div>
+          </div>
+          <div class="blocked rise" style="--d:5.5s"><b>✕ BLOCKED</b><br>https://127.0.0.1/... — private address</div>
+        </div>
+      </div>
+      <div class="panel rise" style="--d:.7s">
+        <div class="ptop"><span>OUTPUT</span><span class="green">WORKER 01</span></div>
+        <div class="pbody">
+          <div class="file-list">
+            <div class="file-row sl" style="--d:3.15s"><span>video.mp4</span><b>18.2 MB</b></div>
+            <div class="file-row sl" style="--d:3.35s"><span>audio.m4a</span><b>3.1 MB</b></div>
+            <div class="file-row sl" style="--d:3.55s"><span>cover.jpg</span><b>0.4 MB</b></div>
+          </div>
+          <div class="zip-card rise" style="--d:5.9s"><b>bundle.zip</b><span>3 FILES · 21.7 MB · ONE ARCHIVE</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-seal" data-label="05 / SEAL">
+    <div class="kicker rise">05 / SEAL</div>
+    <h2 class="rise" style="--d:.12s">Encrypt at rest.<br><em>Key stays in memory.</em></h2>
+    <div class="seal">
+      <div class="filecard rise" style="--d:.45s"><div class="filecard-top"><span>PLAINTEXT / TEMP</span><span>18.2 MB</span></div><div class="file-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="scan"></div><div class="file-label">a81f…c2.mp4 · random output</div></div>
+      <div class="lock-wrap rise" style="--d:2.2s">
+        <svg class="lock" viewBox="0 0 126 126"><path class="shackle" d="M38 55V40a25 25 0 0 1 50 0v15"></path><rect class="body" x="25" y="55" width="76" height="54" rx="4"></rect><path class="key" d="M63 73v18"></path><circle class="key" cx="63" cy="80" r="6"></circle></svg>
+        <div class="lock-label">AES-256-GCM</div><div class="lock-sub">IV 12B · AUTH TAG 16B</div>
+      </div>
+      <div class="filecard sealed rise" style="--d:3s"><div class="filecard-top green"><span>SEALED AT REST</span><span>ENCRYPTED</span></div><div class="hex">9f2c 41ab 7d0e 1c33<br>a4f8 09be 22d1 7c6a<br>e91b 3f02 88ad 6c14</div><div class="file-label">9f2c…a1.enc · random filename</div></div>
+    </div>
+    <div class="cmp rise" style="--d:4.2s"><div><span>SERVER STORAGE</span><b>9f2c…a1.enc</b></div><i>→</i><div><span>USER DOWNLOAD</span><b>Public Post.zip</b></div></div>
+    <div class="seal-chips">
+      <div class="chip2 rise" style="--d:4.35s"><b>KEY</b> / MEMORY ONLY</div>
+      <div class="chip2 rise" style="--d:4.55s"><b>TITLE</b> / NOT ON DISK</div>
+      <div class="chip2 rise" style="--d:4.75s"><b>TTL</b> / 10 MIN</div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-delivery" data-label="06 / DELIVER">
+    <div class="kicker rise">06 / DELIVER</div>
+    <h2 class="rise" style="--d:.12s">Stream out.<br><em>Then vanish.</em></h2>
+    <div class="deliver">
+      <div class="panel delivery-server rise" style="--d:.45s">
+        <div class="ptop"><span>SERVER / API</span><span class="green">AUTH OK</span></div>
+        <div class="pbody"><div class="request-line">GET <span>/api/file/:jobId/:name</span></div><div class="decrypt-line">DECRYPT ON THE FLY<br><b>AES-256-GCM</b> · STREAM<br>STORED AS 9f2c…a1.enc</div></div>
+      </div>
+      <div class="delivery-flow"><span class="flow-label">STREAM</span><div class="flow-line"><i class="packet green"></i></div><span class="flow-label">PLAINTEXT</span></div>
+      <div class="download-card rise" style="--d:.65s"><div class="download-name">Public Post.zip</div><div class="download-meta">21.7 MB · 3 FILES</div><div class="name-source">NAME FROM METADATA</div><div class="download-bar"><i></i></div><div class="saved">SAVED ✓</div></div>
+    </div>
+    <div class="ttl-panel rise" style="--d:1.3s"><span class="ttl-label">AUTO-DELETE TTL</span><span id="ttl">10:00</span><span class="ttl-track"><i id="ttl-bar"></i></span><span id="deleted" class="deleted">FILE + JOB REMOVED</span></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"><div class="toast-icon">!</div><div><b id="toast-title">INSPECT EXPIRED</b><span id="toast-sub">TEMP METADATA DELETED ON SERVER · GOOMYSDL</span></div><i class="toast-bar"></i></div>
+  <div class="footer"><div class="progress"><div id="progress-fill"></div></div><div class="footer-meta"><span>PUBLIC MEDIA DOWNLOADER</span><span>NO ACCOUNT · AUTO-DELETE</span></div></div>
+  <div id="end" class="end"><div class="end-inner"><div class="micro">PUBLIC MEDIA DOWNLOADER / 2026</div><div class="end-logo">Goomys<span>DL</span></div><div class="end-line"></div><div class="end-copy">PASTE. PICK. SAVE.</div><div class="end-meta">NO ACCOUNT · PUBLIC ITEMS ONLY · AUTO-DELETE</div><button id="replay" type="button">REPLAY</button></div></div>
+</div></div>
+<script>
+  const TOTAL=70000;
+  const timing=[
+    {el:document.getElementById('s-title'),start:0,label:'00 / TITLE'},
+    {el:document.getElementById('s-request'),start:4000,label:'01 / INSPECT'},
+    {el:document.getElementById('s-engine'),start:14000,label:'02 / ROUTE'},
+    {el:document.getElementById('s-queue'),start:27000,label:'03 / QUEUE'},
+    {el:document.getElementById('s-download'),start:39000,label:'04 / GUARD + FETCH'},
+    {el:document.getElementById('s-seal'),start:51000,label:'05 / SEAL'},
+    {el:document.getElementById('s-delivery'),start:61000,label:'06 / DELIVER'}
+  ];
+  const stage=document.getElementById('stage');
+  const progress=document.getElementById('progress-fill');
+  const timecode=document.getElementById('timecode');
+  const sceneLabel=document.getElementById('scene-label');
+  const end=document.getElementById('end');
+  const ttl=document.getElementById('ttl');
+  const ttlBar=document.getElementById('ttl-bar');
+  const deleted=document.getElementById('deleted');
+  const inspectArc=document.getElementById('inspect-arc');
+  const inspectTtl=document.getElementById('inspect-ttl');
+  const toast=document.getElementById('toast');
+  const toastTitle=document.getElementById('toast-title');
+  const toastSub=document.getElementById('toast-sub');
+  let toastMode='';
+  let startedAt=0,raf=0,current=null;
+
+  function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
+  function pad(n){return String(n).padStart(2,'0')}
+  function updateTtl(rel){
+    let seconds=600;
+    if(rel>1000) seconds=Math.max(0,Math.round(600*(1-Math.min(1,(rel-1000)/4000))));
+    ttl.textContent=`${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
+    ttlBar.style.width=`${(seconds/600)*100}%`;
+    deleted.classList.toggle('on',rel>=4800);
+  }
+  function setToast(mode,title,sub){
+    if(toastMode===mode) return;
+    toastMode=mode;
+    toast.classList.toggle('show',!!mode);
+    if(mode){toastTitle.textContent=title;toastSub.textContent=sub;}
+  }
+  function updateInspect(rel){
+    const progress=Math.min(1,Math.max(0,(rel-2600)/10000));
+    const minutes=Math.max(0,Math.ceil(15*(1-progress)));
+    inspectTtl.textContent=`${pad(minutes)}:00`;
+    inspectArc.style.strokeDashoffset=`${151*progress}`;
+    inspectArc.style.stroke=minutes<=1?'var(--red)':'';
+  }
+  function tick(now){
+    const t=Math.min(TOTAL,now-startedAt);
+    let scene=timing[0];
+    for(const item of timing) if(t>=item.start) scene=item;
+    if(scene!==current){
+      if(current) current.el.classList.remove('active','play');
+      current=scene;
+      current.el.classList.add('active','play');
+      sceneLabel.textContent=current.label;
+    }
+    progress.style.width=`${(t/TOTAL)*100}%`;
+    timecode.textContent=`${pad(Math.floor(t/60000))}:${pad(Math.floor(t/1000)%60)}`;
+    if(current.el.id==='s-engine') updateInspect(t-current.start);
+    if(current.el.id==='s-delivery') updateTtl(t-current.start);
+    if(t>=26550 && t<29550) setToast('inspect','INSPECT EXPIRED','TEMP METADATA DELETED ON SERVER · GOOMYSDL');
+    else if(t>=66050 && t<69050) setToast('file','FILE DELETED ON SERVER','10 MIN TTL EXPIRED · GOOMYSDL');
+    else setToast('','','');
+    if(t>=66500) end.classList.add('show');
+    if(t>=TOTAL) return;
+    raf=requestAnimationFrame(tick);
+  }
+  function start(){
+    cancelAnimationFrame(raf);
+    end.classList.remove('show');
+    toastMode='';
+    toast.classList.remove('show');
+    for(const item of timing) item.el.classList.remove('active','play');
+    current=null;
+    startedAt=performance.now();
+    void stage.offsetWidth;
+    raf=requestAnimationFrame(tick);
+  }
+  document.getElementById('replay').addEventListener('click',start);
+  addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r') start()});
+  addEventListener('resize',fit);
+  fit();
+  start();
+</script>
+</body>
+</html>

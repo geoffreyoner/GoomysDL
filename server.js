@@ -7,6 +7,8 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { newKey, openSealedStream, sealFile } from './lib/atrest.js';
+import { explainError } from './lib/errors.js';
+import { TEST_SAMPLES, testPlatform } from './lib/platform-tests.js';
 import { displayNameFor, normalizeInfo, parseMediaUrl, safeName } from './lib/validate.js';
 import {
   IMPERSONATE_TARGETS,
@@ -43,6 +45,7 @@ const MIN_FREE_BYTES = 2 * 1024 * 1024 * 1024;
 
 const inspects = new Map();
 const jobs = new Map();
+const platformTests = new Map();
 const queue = [];
 const children = new Set();
 let running = 0;
@@ -79,26 +82,6 @@ app.use('/api', limitPost);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/favicon.ico', (req, res) => res.redirect(308, '/favicon.svg?v=2'));
-
-function explainError(err) {
-  const stderr = typeof err?.stderr === 'string' ? err.stderr : '';
-  const lines = stderr.split('\n').map((l) => l.trim()).filter(Boolean);
-  const errorLine = [...lines].reverse().find((l) => l.startsWith('ERROR:'));
-  let message = errorLine
-    ? errorLine.replace(/^ERROR:\s*/, '')
-    : String(err?.message || 'Extraction failed.');
-  message = message.split('\n')[0].slice(0, 300);
-  if (/Unsupported URL/i.test(message)) return 'This URL is not supported by the extractor.';
-  if (/Sign in|log in|login|cookies|private|rate.?limit|401|unauthorized/i.test(message)) {
-    return 'This post needs login/cookies or is rate-limited. Public posts only.';
-  }
-  if (/Spotify album|playlist/i.test(message)) return message;
-  if (/no downloadable media|no download links|no files found|no chapter images/i.test(message)) {
-    return 'No downloadable media found at this URL.';
-  }
-  if (/timed? ?out/i.test(message)) return 'The platform took too long to respond. Try again.';
-  return message;
-}
 
 app.post('/api/inspect', async (req, res) => {
   let url;
@@ -236,6 +219,19 @@ app.get('/api/system', async (req, res) => {
     running,
     queued: queue.length,
   });
+});
+
+app.post('/api/platforms/:id/test', async (req, res) => {
+  const { id } = req.params;
+  if (!Object.hasOwn(TEST_SAMPLES, id)) {
+    return res.status(404).json({ error: 'Unknown platform.' });
+  }
+  let pending = platformTests.get(id);
+  if (!pending) {
+    pending = testPlatform(id).finally(() => platformTests.delete(id));
+    platformTests.set(id, pending);
+  }
+  return res.json(await pending);
 });
 
 function pump() {
@@ -452,6 +448,13 @@ async function cleanup() {
     else hits.delete(ip);
   }
 }
+
+app.use((req, res) => {
+  if (req.path === '/api' || req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found.' });
+  }
+  return res.status(404).type('text').send('Not found.');
+});
 
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);

@@ -13,6 +13,7 @@ Web app for downloading video, photo, audio, and files from public sources. Buil
 - Additional providers through `scrapr`: Spotify tracks, TeraBox, Threads, Pixiv, Douyin, MediaFire, Pixeldrain, Catbox, Google Drive, Krakenfiles, Doodstream, Komiku, Komikindo, Asura Scans, MangaDex, Nimegami, and Sfile
 - Photo posts (Instagram carousels, TikTok slideshows) via `gallery-dl`
 - Multi-file results (comic chapters, galleries, playlists) are bundled into one ZIP
+- Supported page has a per-platform TEST button that checks extraction of a sample link (no download)
 - Per-IP rate limit, 500 MB max file size, disk-space guard
 
 ## Requirements

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6">
+  <link rel="stylesheet" href="./styles.css?v=8">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -35,35 +35,36 @@
           <span class="panel-id">YT-DLP + SCRAPER</span>
         </div>
         <ul class="platform-grid">
-          <li><span>01</span>TIKTOK</li>
-          <li><span>02</span>INSTAGRAM</li>
-          <li><span>03</span>X / TWITTER</li>
-          <li><span>04</span>YOUTUBE</li>
-          <li><span>05</span>FACEBOOK</li>
-          <li><span>06</span>REDDIT</li>
-          <li><span>07</span>VIMEO</li>
-          <li><span>08</span>TWITCH</li>
-          <li><span>09</span>SOUNDCLOUD</li>
-          <li><span>10</span>DAILYMOTION</li>
-          <li><span>11</span>SPOTIFY</li>
-          <li><span>12</span>TERABOX</li>
-          <li><span>13</span>THREADS</li>
-          <li><span>14</span>PIXIV</li>
-          <li><span>15</span>DOUYIN</li>
-          <li><span>16</span>MEDIAFIRE</li>
-          <li><span>17</span>PIXELDRAIN</li>
-          <li><span>18</span>CATBOX</li>
-          <li><span>19</span>GOOGLE DRIVE</li>
-          <li><span>20</span>KRAKENFILES</li>
-          <li><span>21</span>DOODSTREAM</li>
-          <li><span>22</span>KOMIKU</li>
-          <li><span>23</span>KOMIKINDO</li>
-          <li><span>24</span>ASURA SCANS</li>
-          <li><span>25</span>MANGADEX</li>
-          <li><span>26</span>NIMEGAMI</li>
-          <li><span>27</span>SFILE</li>
+          <li data-provider="tiktok"><span class="platform-index">01</span><span class="platform-name">TIKTOK</span></li>
+          <li data-provider="instagram"><span class="platform-index">02</span><span class="platform-name">INSTAGRAM</span></li>
+          <li data-provider="twitter"><span class="platform-index">03</span><span class="platform-name">X / TWITTER</span></li>
+          <li data-provider="youtube"><span class="platform-index">04</span><span class="platform-name">YOUTUBE</span></li>
+          <li data-provider="facebook"><span class="platform-index">05</span><span class="platform-name">FACEBOOK</span></li>
+          <li data-provider="reddit"><span class="platform-index">06</span><span class="platform-name">REDDIT</span></li>
+          <li data-provider="vimeo"><span class="platform-index">07</span><span class="platform-name">VIMEO</span></li>
+          <li data-provider="twitch"><span class="platform-index">08</span><span class="platform-name">TWITCH</span></li>
+          <li data-provider="soundcloud"><span class="platform-index">09</span><span class="platform-name">SOUNDCLOUD</span></li>
+          <li data-provider="dailymotion"><span class="platform-index">10</span><span class="platform-name">DAILYMOTION</span></li>
+          <li data-provider="spotify"><span class="platform-index">11</span><span class="platform-name">SPOTIFY</span></li>
+          <li data-provider="terabox"><span class="platform-index">12</span><span class="platform-name">TERABOX</span></li>
+          <li data-provider="threads"><span class="platform-index">13</span><span class="platform-name">THREADS</span></li>
+          <li data-provider="pixiv"><span class="platform-index">14</span><span class="platform-name">PIXIV</span></li>
+          <li data-provider="douyin"><span class="platform-index">15</span><span class="platform-name">DOUYIN</span></li>
+          <li data-provider="mediafire"><span class="platform-index">16</span><span class="platform-name">MEDIAFIRE</span></li>
+          <li data-provider="pixeldrain"><span class="platform-index">17</span><span class="platform-name">PIXELDRAIN</span></li>
+          <li data-provider="catbox"><span class="platform-index">18</span><span class="platform-name">CATBOX</span></li>
+          <li data-provider="gdrive"><span class="platform-index">19</span><span class="platform-name">GOOGLE DRIVE</span></li>
+          <li data-provider="krakenfiles"><span class="platform-index">20</span><span class="platform-name">KRAKENFILES</span></li>
+          <li data-provider="doodstream"><span class="platform-index">21</span><span class="platform-name">DOODSTREAM</span></li>
+          <li data-provider="komiku"><span class="platform-index">22</span><span class="platform-name">KOMIKU</span></li>
+          <li data-provider="komikindo"><span class="platform-index">23</span><span class="platform-name">KOMIKINDO</span></li>
+          <li data-provider="asurascans"><span class="platform-index">24</span><span class="platform-name">ASURA SCANS</span></li>
+          <li data-provider="mangadex"><span class="platform-index">25</span><span class="platform-name">MANGADEX</span></li>
+          <li data-provider="nimegami"><span class="platform-index">26</span><span class="platform-name">NIMEGAMI</span></li>
+          <li data-provider="sfile"><span class="platform-index">27</span><span class="platform-name">SFILE</span></li>
         </ul>
-        <p class="platform-note" lang="id">Hanya item publik. Konten privat, dibatasi usia, butuh login, atau terkunci wilayah tidak bisa diambil. Album/playlist Spotify, halaman seri comic, dan halaman batch anime belum didukung. Nimegami: tempel link download episode. Hasil lebih dari satu file otomatis dibundel jadi ZIP. Sumber scraper bersifat best-effort dan bisa berubah. <span lang="en">Public items only. Private, age-gated, login-required, or region-locked content cannot be fetched. Spotify albums/playlists, comic series pages, and anime batch pages are not supported yet. Nimegami: paste an episode download link. Multiple files are bundled into one ZIP. Scraper sources are best-effort and may change.</span></p>
+        <p class="platform-test-note" id="test-note" aria-live="polite" hidden></p>
+        <p class="platform-note" lang="id">Hanya item publik. Konten privat, dibatasi usia, butuh login, atau terkunci wilayah tidak bisa diambil. Album/playlist Spotify, halaman seri comic, dan halaman batch anime belum didukung. Nimegami: tempel link download episode. Hasil lebih dari satu file otomatis dibundel jadi ZIP. Tombol TEST mengecek ekstraksi contoh link, bukan mengunduh file. Sumber scraper bersifat best-effort dan bisa berubah. <span lang="en">Public items only. Private, age-gated, login-required, or region-locked content cannot be fetched. Spotify albums/playlists, comic series pages, and anime batch pages are not supported yet. Nimegami: paste an episode download link. Multiple files are bundled into one ZIP. TEST checks extraction of a sample link, not a download. Scraper sources are best-effort and may change.</span></p>
       </section>
     </main>
 
@@ -81,5 +82,6 @@
       </div>
     </footer>
   </div>
+  <script src="./supported.js?v=2" type="module"></script>
 </body>
 </html>

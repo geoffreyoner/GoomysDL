@@ -889,9 +889,10 @@ h1 {
 }
 
 .platform-grid li {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px 10px;
+  align-items: center;
   padding: 18px 14px;
   background: var(--panel);
   font-family: var(--mono);
@@ -900,9 +901,75 @@ h1 {
   color: var(--ink);
 }
 
-.platform-grid li span {
+.platform-index {
+  grid-column: 1;
+  grid-row: 1;
   font-size: 8px;
   color: var(--dim);
+}
+
+.platform-name {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.platform-status {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.platform-status[data-state="ok"] {
+  color: #7bd88f;
+}
+
+.platform-status[data-state="fail"] {
+  color: #f07171;
+}
+
+.platform-status[data-state="login"],
+.platform-status[data-state="timeout"] {
+  color: #e3b341;
+}
+
+.platform-status[data-state="running"] {
+  color: var(--ink);
+}
+
+.platform-test {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.platform-test:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.platform-test-note {
+  margin: 0;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.7;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .platform-note {
